@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SA Study">
+<title>SA Upskill — Study Command Centre</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050810;--s1:#080d1c;--s2:#0d1424;--s3:#141e35;
+  --border:#1e2d4a;--b2:#243456;
+  --txt:#dce7f8;--t2:#8892b0;--t3:#4a5568;
+  --H:#b57bee;--Hbg:#1a0a35;--Hb:#7c3aed;
+  --L:#00e5c3;--Lbg:#001a15;--Lb:#059669;
+  --R:#ff8c42;--Rbg:#1e0a00;--Rb:#c2410c;
+  --xp:#ffd60a;--done:#06d6a0;--prog:#3b82f6;--red:#ef233c;--blue:#38bdf8;
+  --font:'Syne',sans-serif;--mono:'Inconsolata',monospace;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--font);font-size:13px}
+button{cursor:pointer;font-family:var(--font);border:none;outline:none}
+textarea,input,select{font-family:var(--font);outline:none}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+/* ── SYNC BAR (identical to pers-evol-v2) ── */
+#sync-bar{position:fixed;top:0;left:0;right:0;height:2px;z-index:200;pointer-events:none}
+#sync-bar.active{background:linear-gradient(90deg,transparent,var(--xp),transparent);animation:sb 1.2s infinite}
+@keyframes sb{0%,100%{opacity:.4}50%{opacity:1}}
+
+.nav{display:flex;align-items:center;gap:4px;padding:8px 14px;background:rgba(8,13,28,.97);border-bottom:1px solid var(--border);z-index:50;flex-wrap:wrap;min-height:48px}
+.nav-brand{display:flex;align-items:center;gap:8px;margin-right:12px}
+.nav-pi{font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--H),var(--L));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-title{font-size:12px;font-weight:700}
+.nav-sub{font-size:9px;color:var(--t2);font-family:var(--mono)}
+.tab{padding:5px 11px;border-radius:6px;font-size:11px;font-weight:700;background:transparent;color:var(--t2);border:1px solid transparent;transition:all .2s;white-space:nowrap}
+.tab:hover{color:var(--txt);border-color:var(--b2)}
+.tab.on{color:#000}
+.tab.on.t-map{background:linear-gradient(135deg,var(--H),#a78bfa)}
+.tab.on.t-plan{background:linear-gradient(135deg,#1e40af,var(--blue))}
+.tab.on.t-kanban{background:linear-gradient(135deg,#065f46,var(--L))}
+.tab.on.t-dash{background:linear-gradient(135deg,#92400e,var(--xp))}
+.tab.on.t-assess{background:linear-gradient(135deg,var(--red),#f97316)}
+.tab.on.t-p2{background:linear-gradient(135deg,#0f766e,#06b6d4)}
+.xp-row{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px}
+.xp-val{color:var(--xp);font-weight:700}
+.streak-val{color:#f97316;font-weight:700}
+.lvl-badge{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;background:linear-gradient(135deg,var(--xp),var(--R));color:#000}
+
+/* sync dot identical to pers-evol-v2 */
+#sync-dot{font-size:10px;font-family:var(--mono);color:var(--t3)}
+
+.page{display:none;height:calc(100vh - 48px);overflow:hidden}
+.page.on{display:flex;flex-direction:column}
+.scroll{overflow-y:auto;flex:1;padding:14px}
+#pg-map{position:relative;overflow:hidden}
+#map-svg-wrap{width:100%;height:100%;cursor:grab}
+#map-svg-wrap:active{cursor:grabbing}
+#map-svg{width:100%;height:100%}
+.map-top{position:absolute;top:12px;left:12px;z-index:10;display:flex;flex-direction:column;gap:8px}
+.map-legend{background:rgba(8,13,28,.92);border:1px solid var(--border);border-radius:10px;padding:10px 13px}
+.map-legend-title{font-size:9px;font-weight:800;font-family:var(--mono);margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em}
+.map-legend-row{display:flex;align-items:center;gap:7px;font-size:9px;color:var(--t2);margin-bottom:3px;font-family:var(--mono)}
+.leg-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.map-filters{background:rgba(8,13,28,.92);border:1px solid var(--border);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px}
+.mf-label{font-size:9px;font-weight:800;color:var(--t2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.mf-btn{padding:3px 10px;border-radius:5px;font-size:9px;font-weight:700;background:var(--s2);color:var(--t2);border:1px solid var(--border);font-family:var(--mono);text-align:left}
+.mf-btn.on{background:var(--s3);color:var(--txt);border-color:var(--b2)}
+.mf-btn.on.fH{background:var(--Hbg);color:var(--H);border-color:var(--Hb)}
+.mf-btn.on.fL{background:var(--Lbg);color:var(--L);border-color:var(--Lb)}
+.mf-btn.on.fR{background:var(--Rbg);color:var(--R);border-color:var(--Rb)}
+.mf-btn.on.fDone{background:rgba(6,214,160,.1);color:var(--done);border-color:var(--done)}
+.map-ctrls{position:absolute;bottom:16px;right:16px;z-index:10;display:flex;gap:6px}
+.mc-btn{padding:6px 12px;border-radius:7px;background:rgba(8,13,28,.9);border:1px solid var(--border);color:var(--t2);font-size:10px;font-family:var(--mono)}
+.map-stats{position:absolute;bottom:16px;left:12px;z-index:10;background:rgba(8,13,28,.92);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-family:var(--mono);font-size:9px;color:var(--t2)}
+.map-stats span{color:var(--xp);font-weight:700}
+.plan-intro{background:var(--s1);border-radius:10px;padding:12px 16px;margin-bottom:14px;border-left:3px solid var(--L);display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+.plan-intro-val{font-size:20px;font-weight:800;font-family:var(--mono);color:var(--xp)}
+.plan-intro-label{font-size:9px;color:var(--t2);font-family:var(--mono)}
+.week-block{margin-bottom:16px}
+.week-hdr{display:flex;align-items:center;gap:10px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.week-num{font-family:var(--mono);font-size:10px;font-weight:700;background:var(--s2);padding:3px 10px;border-radius:20px;color:var(--t2)}
+.week-dates{font-size:11px;color:var(--t2)}
+.week-milestone{font-size:9px;font-weight:700;padding:2px 9px;border-radius:20px;background:rgba(255,214,10,.08);color:var(--xp);border:1px solid rgba(255,214,10,.2)}
+.week-prog{margin-left:auto;font-size:10px;font-family:var(--mono)}
+.day-row{background:var(--s1);border-radius:9px;margin-bottom:5px;border:1px solid var(--border);overflow:hidden}
+.day-row:hover{border-color:var(--b2)}
+.day-hdr{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--border);background:var(--s2)}
+.day-num{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--t3)}
+.day-date{font-size:11px;font-weight:700}
+.day-dow{font-size:9px;color:var(--t2);font-family:var(--mono)}
+.day-topics{display:flex;flex-wrap:wrap;gap:5px;padding:7px 12px}
+.dtc{padding:4px 9px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;border:1px solid transparent}
+.dtc.leg-H{background:var(--Hbg);color:var(--H);border-color:rgba(181,123,238,.2)}
+.dtc.leg-L{background:var(--Lbg);color:var(--L);border-color:rgba(0,229,195,.2)}
+.dtc.leg-R{background:var(--Rbg);color:var(--R);border-color:rgba(255,140,66,.2)}
+.dtc.done-c{opacity:.55;text-decoration:line-through}
+.dtc:hover{filter:brightness(1.2);transform:translateY(-1px)}
+.dtc-cb{width:12px;height:12px;border-radius:3px;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dtc-cb.on{background:currentColor}
+.day-special{padding:8px 12px;font-size:10px;color:var(--blue);font-weight:600}
+#pg-kanban .scroll{padding:0}
+.kanban-wrap{display:flex;gap:10px;padding:14px;height:100%;overflow-x:auto;align-items:flex-start}
+.kb-col{min-width:210px;max-width:210px;background:var(--s1);border-radius:10px;border:1px solid var(--border);overflow:hidden;flex-shrink:0;display:flex;flex-direction:column}
+.kb-col-hdr{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;background:var(--s2)}
+.kb-col-title{font-size:9px;font-weight:800;font-family:var(--mono)}
+.kb-col-prog{font-size:9px;font-family:var(--mono);color:var(--t2)}
+.kb-cards{padding:6px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 120px)}
+.kb-card{border-radius:7px;padding:7px 8px;cursor:pointer;transition:all .15s;border:1px solid transparent;position:relative;overflow:hidden}
+.kb-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kb-card.leg-H{background:var(--Hbg);border-color:rgba(181,123,238,.2)}
+.kb-card.leg-H::before{background:var(--H)}
+.kb-card.leg-L{background:var(--Lbg);border-color:rgba(0,229,195,.2)}
+.kb-card.leg-L::before{background:var(--L)}
+.kb-card.leg-R{background:var(--Rbg);border-color:rgba(255,140,66,.2)}
+.kb-card.leg-R::before{background:var(--R)}
+.kb-card.done{opacity:.5;filter:grayscale(.3)}
+.kb-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+.kb-card-top{display:flex;justify-content:space-between;margin-bottom:3px}
+.kb-card-id{font-family:var(--mono);font-size:8px;font-weight:700;opacity:.7}
+.kb-card-day{font-family:var(--mono);font-size:8px;color:var(--t3)}
+.kb-card-name{font-size:9px;font-weight:700;line-height:1.35;margin-bottom:4px}
+.kb-card-status{font-size:8px;font-family:var(--mono);padding:1px 6px;border-radius:3px;display:inline-block}
+.sNS{background:rgba(100,116,139,.15);color:#64748b}
+.sIP{background:rgba(59,130,246,.15);color:#60a5fa}
+.sDone{background:rgba(6,214,160,.15);color:var(--done)}
+.sNR{background:rgba(239,35,60,.15);color:var(--red)}
+.kb-milestone{margin:3px 0;padding:4px 7px;border-radius:5px;background:rgba(255,214,10,.06);border:1px solid rgba(255,214,10,.15);font-size:8px;font-weight:700;color:var(--xp);text-align:center}
+.kb-special{padding:5px 7px;border-radius:6px;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.15);font-size:8px;font-weight:600;color:var(--blue)}
+.dash-hero{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.d-stat{background:var(--s1);border-radius:10px;padding:13px;border:1px solid var(--border)}
+.d-stat-label{font-size:10px;color:var(--t2);font-family:var(--mono);margin-bottom:6px}
+.d-stat-val{font-size:26px;font-weight:800;font-family:var(--mono);line-height:1}
+.d-stat-sub{font-size:9px;color:var(--t3);font-family:var(--mono);margin-top:4px}
+.pbar{background:var(--s3);border-radius:99px;overflow:hidden;margin:5px 0}
+.pbar-fill{border-radius:99px;transition:width .5s ease}
+.dash-mid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.d-leg{background:var(--s1);border-radius:10px;padding:13px;border:1px solid var(--border)}
+.d-leg-title{font-size:11px;font-weight:700;margin-bottom:8px}
+.d-leg-pct{font-size:22px;font-weight:800;font-family:var(--mono);line-height:1;margin-bottom:5px}
+.d-leg-sub{font-size:9px;color:var(--t2);font-family:var(--mono)}
+.level-card{background:var(--s1);border-radius:10px;padding:13px;border:1px solid var(--border)}
+.lv-name{font-size:15px;font-weight:800;color:var(--xp);margin-bottom:6px}
+.lv-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:8px}
+.lv-row{padding:3px 6px;border-radius:4px;background:var(--s2);font-size:8px;font-family:var(--mono)}
+.lv-row.cur{background:rgba(255,214,10,.1);color:var(--xp);font-weight:700}
+.milestones-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px}
+.m-card{background:var(--s1);border-radius:10px;padding:11px;border:1px solid var(--border);border-top:3px solid transparent}
+.m-card.hit{box-shadow:0 0 16px rgba(6,214,160,.1)}
+.m-label{font-size:9px;font-weight:800;font-family:var(--mono);margin-bottom:2px}
+.m-date{font-size:8px;color:var(--t2);font-family:var(--mono);margin-bottom:6px}
+.m-pct{font-size:18px;font-weight:800;font-family:var(--mono)}
+.m-sub{font-size:8px;color:var(--t3);font-family:var(--mono);margin-top:2px}
+.badges-section{background:var(--s1);border-radius:10px;padding:13px;margin-bottom:14px;border:1px solid var(--border)}
+.badges-title{font-size:11px;font-weight:700;color:var(--xp);margin-bottom:10px}
+.badges-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:4px}
+.badge{text-align:center;padding:5px 3px;border-radius:6px;background:var(--s2);border:1px solid var(--border);cursor:pointer}
+.badge.earned{border-color:var(--xp);box-shadow:0 0 8px rgba(255,214,10,.12)}
+.badge:not(.earned){opacity:.22;filter:grayscale(1)}
+.badge-icon{font-size:14px;display:block;margin-bottom:2px}
+.badge-id{font-size:7px;font-family:var(--mono);color:var(--t3)}
+.streak-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-top:6px}
+.streak-sq{height:12px;border-radius:2px;background:var(--s3)}
+.streak-sq.on{background:var(--done)}
+.assess-nav{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:14px}
+.aw-btn{padding:4px 10px;border-radius:6px;font-size:10px;font-weight:700;background:var(--s2);color:var(--t2);border:1px solid var(--border);font-family:var(--mono)}
+.aw-btn.on{background:var(--red);color:#fff;border-color:var(--red)}
+.aw-btn.done{border-color:var(--done);color:var(--done)}
+.quiz-box{background:var(--s1);border-radius:10px;border:1px solid var(--border);overflow:hidden}
+.quiz-hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:13px 16px;border-bottom:1px solid var(--border)}
+.quiz-title{font-size:13px;font-weight:800;margin-bottom:3px}
+.quiz-meta{font-size:10px;color:var(--t2);font-family:var(--mono)}
+.quiz-timer{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--xp)}
+.quiz-timer.urgent{color:var(--red);animation:blink .6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.quiz-body{padding:16px}
+.q-item{margin-bottom:14px;padding:11px;background:var(--s2);border-radius:9px;border:1px solid var(--border)}
+.q-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.q-num{font-family:var(--mono);font-size:9px;color:var(--t2)}
+.q-type{font-size:8px;font-weight:700;padding:2px 7px;border-radius:4px}
+.q-type.scenario{background:rgba(255,140,66,.15);color:var(--R)}
+.q-type.recall{background:rgba(56,189,248,.15);color:var(--blue)}
+.q-type.handson{background:rgba(6,214,160,.15);color:var(--done)}
+.q-text{font-size:11.5px;font-weight:600;line-height:1.55;margin-bottom:9px}
+.q-ans{width:100%;background:var(--s3);border:1px solid var(--b2);border-radius:7px;padding:8px 11px;color:var(--txt);font-size:11px;resize:vertical;min-height:75px}
+.q-ans:focus{border-color:var(--R)}
+.quiz-footer{display:flex;justify-content:space-between;align-items:center;padding:11px 16px;border-top:1px solid var(--border)}
+.q-submit{padding:7px 18px;border-radius:7px;background:var(--red);color:#fff;font-size:11px;font-weight:700}
+.quiz-start{text-align:center;padding:28px 16px}
+.q-start-btn{padding:9px 24px;border-radius:8px;background:linear-gradient(135deg,var(--red),#f97316);color:#fff;font-weight:700;font-size:12px}
+.quiz-reflection{margin-top:12px;padding:11px 13px;background:rgba(56,189,248,.05);border:1px solid rgba(56,189,248,.2);border-radius:9px}
+.refl-title{font-size:10px;font-weight:700;color:var(--blue);font-family:var(--mono);margin-bottom:7px}
+.refl-prompt{background:var(--s3);border-radius:6px;padding:9px 11px;font-family:var(--mono);font-size:10px;color:var(--blue);line-height:1.7}
+.score-display{font-size:36px;font-weight:800;font-family:var(--mono);text-align:center;margin:10px 0}
+.p2-banner{background:linear-gradient(135deg,rgba(15,118,110,.2),rgba(6,182,212,.1));border:1px solid rgba(20,184,166,.3);border-radius:10px;padding:16px;margin-bottom:16px}
+.p2-banner-title{font-size:18px;font-weight:800;color:#14b8a6;margin-bottom:4px}
+.p2-banner-sub{font-size:11px;color:var(--t2)}
+.p2-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.p2-card{background:var(--s1);border-radius:10px;border:1px solid var(--border);padding:14px;opacity:.75}
+.p2-icon{font-size:22px;margin-bottom:7px}
+.p2-title{font-size:12px;font-weight:800;color:#14b8a6;margin-bottom:7px}
+.p2-list{list-style:none;font-size:10px;color:var(--t2);line-height:2}
+.p2-list li::before{content:'○  ';color:var(--t3)}
+.p2-note{margin-top:9px;padding:6px 10px;border-radius:6px;background:rgba(15,118,110,.08);border:1px dashed rgba(20,184,166,.2);font-size:9px;color:rgba(20,184,166,.6);font-family:var(--mono)}
+.overlay{position:fixed;inset:0;background:rgba(5,8,16,.88);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.on{display:flex}
+.modal{background:var(--s2);border-radius:14px;border:1px solid var(--b2);width:100%;max-width:660px;max-height:90vh;overflow-y:auto;position:relative;animation:mIn .2s ease}
+@keyframes mIn{from{transform:scale(.93) translateY(16px);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-close{position:absolute;top:12px;right:12px;background:var(--s3);color:var(--t2);width:26px;height:26px;border-radius:50%;font-size:13px;display:flex;align-items:center;justify-content:center;z-index:10}
+.modal-body{padding:20px}
+.topic-name{font-size:17px;font-weight:800;line-height:1.25;margin-bottom:12px}
+.status-sel{padding:5px 10px;border-radius:6px;font-size:10px;font-weight:700;background:var(--s3);border:1px solid var(--b2);color:var(--txt);font-family:var(--mono)}
+.ts{margin-bottom:13px}
+.ts-label{font-size:9px;font-weight:800;color:var(--t2);font-family:var(--mono);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}
+.ts-box{font-size:11px;line-height:1.7;background:var(--s3);border-radius:8px;padding:9px 12px}
+.ts-insight{background:rgba(255,214,10,.05);border:1px solid rgba(255,214,10,.15);border-radius:8px;padding:9px 12px;font-size:11px;color:var(--xp);line-height:1.7}
+.handson-tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:9px;font-weight:700;margin-bottom:5px}
+.h-audit{background:rgba(56,189,248,.15);color:var(--blue)}
+.h-lab{background:rgba(0,229,195,.15);color:var(--L)}
+.h-deliverable{background:rgba(255,140,66,.15);color:var(--R)}
+.notes-area{width:100%;background:var(--s3);border:1px solid var(--b2);border-radius:8px;padding:9px 12px;color:var(--txt);font-size:11px;resize:vertical;min-height:80px;line-height:1.6}
+.notes-area:focus{border-color:var(--prog)}
+.url-row{display:flex;gap:6px;align-items:center}
+.url-inp{flex:1;background:var(--s3);border:1px solid var(--b2);border-radius:7px;padding:6px 10px;color:var(--txt);font-size:10px;font-family:var(--mono)}
+.url-open-btn{padding:5px 11px;border-radius:6px;background:rgba(255,214,10,.1);color:var(--xp);font-size:10px;font-weight:700;border:1px solid rgba(255,214,10,.3);text-decoration:none;white-space:nowrap}
+.conn-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.conn-chip{padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;background:var(--s3);border:1px solid var(--border);cursor:pointer;font-family:var(--mono)}
+.conn-chip:hover{border-color:var(--xp);color:var(--xp)}
+.modal-save{padding:8px 20px;border-radius:7px;background:var(--prog);color:#fff;font-size:11px;font-weight:700;margin-top:13px}
+.tag{padding:2px 7px;border-radius:4px;font-size:8px;font-weight:700}
+.tagH{background:var(--Hbg);color:var(--H);border:1px solid rgba(181,123,238,.3)}
+.tagL{background:var(--Lbg);color:var(--L);border:1px solid rgba(0,229,195,.3)}
+.tagR{background:var(--Rbg);color:var(--R);border:1px solid rgba(255,140,66,.3)}
+</style>
+</head>
+<body>
+<div id="sync-bar"></div>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <span class="nav-pi">π</span>
+    <div><div class="nav-title">SA Study Command</div><div class="nav-sub">139 topics · 60 days · Apr 1 → Jun 23, 2026</div></div>
+  </div>
+  <button class="tab t-map on" onclick="showTab('map')">🧠 Mind Map</button>
+  <button class="tab t-plan" onclick="showTab('plan')">📅 60-Day Plan</button>
+  <button class="tab t-kanban" onclick="showTab('kanban')">📋 Kanban</button>
+  <button class="tab t-dash" onclick="showTab('dash')">📊 Dashboard</button>
+  <button class="tab t-assess" onclick="showTab('assess')">📝 Assessments</button>
+  <button class="tab t-p2" onclick="showTab('p2')">🚀 Phase 2</button>
+  <div class="xp-row">
+    <span id="sync-dot"></span>
+    <span class="streak-val" id="streak-el">🔥 0</span>
+    <span class="xp-val" id="xp-el">0 XP</span>
+    <span class="lvl-badge" id="lvl-el">Rookie</span>
+  </div>
+</nav>
+
+<div class="page on" id="pg-map">
+  <div class="map-top">
+    <div class="map-legend">
+      <div class="map-legend-title">Pi Model</div>
+      <div class="map-legend-row"><div class="leg-dot" style="background:var(--H)"></div>Horizontal (54)</div>
+      <div class="map-legend-row"><div class="leg-dot" style="background:var(--L)"></div>Left Leg (53)</div>
+      <div class="map-legend-row"><div class="leg-dot" style="background:var(--R)"></div>Right Leg (32)</div>
+      <div class="map-legend-row"><div class="leg-dot" style="background:var(--done)"></div>Completed</div>
+      <div style="font-size:8px;color:var(--t3);margin-top:5px;font-family:var(--mono)">Click · Drag · Scroll zoom</div>
+    </div>
+    <div class="map-filters">
+      <div class="mf-label">Filter</div>
+      <button class="mf-btn on" id="mf-all" onclick="setMapFilter('all')">All (139)</button>
+      <button class="mf-btn fH" id="mf-H" onclick="setMapFilter('H')">Horizontal (54)</button>
+      <button class="mf-btn fL" id="mf-L" onclick="setMapFilter('L')">Left Leg (53)</button>
+      <button class="mf-btn fR" id="mf-R" onclick="setMapFilter('R')">Right Leg (32)</button>
+      <button class="mf-btn fDone" id="mf-done" onclick="setMapFilter('done')">Completed</button>
+    </div>
+  </div>
+  <div id="map-svg-wrap"><svg id="map-svg"></svg></div>
+  <div class="map-stats">Done: <span id="map-done-count">0</span>/139 &nbsp;·&nbsp; XP: <span id="map-xp-count">0</span></div>
+  <div class="map-ctrls">
+    <button class="mc-btn" onclick="mapZoom(1.2)">＋</button>
+    <button class="mc-btn" onclick="mapZoom(0.8)">－</button>
+    <button class="mc-btn" onclick="mapReset()">⌂</button>
+  </div>
+</div>
+
+<div class="page" id="pg-plan"><div class="scroll" id="plan-content"></div></div>
+<div class="page" id="pg-kanban"><div class="kanban-wrap" id="kanban-content"></div></div>
+<div class="page" id="pg-dash"><div class="scroll" id="dash-content"></div></div>
+<div class="page" id="pg-assess"><div class="scroll"><div class="assess-nav" id="assess-nav"></div><div id="assess-content"></div></div></div>
+<div class="page" id="pg-p2"><div class="scroll" id="p2-content"></div></div>
+
+<div class="overlay" id="topic-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════
+// SYNC CONFIG — identical pattern to pers-evol-v2
+// ═══════════════════════════════════════════════════
+const SUPA_URL = 'https://alxtlzxbjpxxdrpohnvb.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFseHRsenhianB4eGRycG9obnZiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ0NTM3NTUsImV4cCI6MjA5MDAyOTc1NX0.7B41JEAgwt0LmubRQoq4csfTdH4J_I2DXUzHe7iGZkw';
+const SUPA_ROW = 'sa_study_v1';
+const SUPA_EP  = SUPA_URL + '/rest/v1/tracker_data';
+
+// ── State ── single JSON blob, same as pers-evol-v2
+let S = { done:{}, notes:{}, status:{}, url:{}, assessAnswers:{}, assessScores:{}, xp:0, streak:0, lastActive:null };
+let _syncing = false;
+
+function lsGet(k,fb){ try{ const v=localStorage.getItem(k); return v!=null?JSON.parse(v):fb; }catch(e){ return fb; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+
+// ── Supabase headers (identical to pers-evol-v2) ──
+function sHeaders(){
+  return { 'Content-Type':'application/json', 'apikey':SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY, 'Prefer':'resolution=merge-duplicates' };
+}
+
+// ── Sync dot (identical to pers-evol-v2) ──
+function syncDot(msg,c){
+  const el=document.getElementById('sync-dot');
+  if(el){ el.textContent=msg; el.style.color=c||'var(--t3)'; }
+}
+
+// ── Cloud load (identical pattern to pers-evol-v2) ──
+async function cloudLoad(){
+  if(_syncing) return; _syncing=true;
+  try{
+    const r=await fetch(SUPA_EP+'?id=eq.'+SUPA_ROW+'&select=data,updated_at',{headers:sHeaders()});
+    if(!r.ok){ _syncing=false; return; }
+    const rows=await r.json();
+    if(!rows.length){ await cloudSave(); _syncing=false; return; }
+    const cloud=JSON.parse(rows[0].data||'{}');
+    const cTs=cloud.lastUpdated||0, lTs=S.lastUpdated||0;
+    if(cTs>lTs){
+      S=cloud;
+      lsSet('sa_study',S);
+      syncDot('⇄ '+new Date().toLocaleTimeString(),'var(--done)');
+      refreshNav();
+      if(currentTab==='plan') renderPlan();
+      if(currentTab==='kanban') renderKanban();
+      if(currentTab==='dash') renderDash();
+      if(currentTab==='map') renderMap();
+      if(currentTab==='assess'){ renderAssessNav(); renderAssessBody(); }
+    } else {
+      syncDot('✓ '+new Date().toLocaleTimeString(),'var(--t3)');
+    }
+  }catch(e){ syncDot('○','var(--t3)'); }
+  _syncing=false;
+}
+
+// ── Debounced save (identical to pers-evol-v2) ──
+let _saveTimer=null;
+function schedSave(){ clearTimeout(_saveTimer); _saveTimer=setTimeout(cloudSave,1500); }
+
+// ── Cloud save (identical pattern to pers-evol-v2) ──
+async function cloudSave(){
+  S.lastUpdated=Date.now();
+  lsSet('sa_study',S);
+  syncDot('↑','var(--xp)');
+  document.getElementById('sync-bar').className='active';
+  try{
+    const r=await fetch(SUPA_EP,{
+      method:'POST', headers:sHeaders(),
+      body:JSON.stringify({ id:SUPA_ROW, data:JSON.stringify(S), updated_at:new Date().toISOString() })
+    });
+    if(r.ok||r.status===201) syncDot('✓','var(--done)');
+    else syncDot('↯','var(--red)');
+  }catch(e){ syncDot('○','var(--t3)'); }
+  document.getElementById('sync-bar').className='';
+}
+
+// ── Boot: load local first, then cloud, then poll every 5s ──
+function initSync(){
+  S = lsGet('sa_study', S);
+  refreshNav();
+  setTimeout(cloudLoad, 800);
+  setInterval(cloudLoad, 5000);
+}
+
+// ═══════════════════════════════════════════════════
+// TOPIC DATA
+// ═══════════════════════════════════════════════════
+const TOPICS = [
+  {id:'H01',leg:'H',name:'Draft Enterprise Resilience Definition',handson:'audit',activity:'Write a formal enterprise resilience definition for a mock 1000-seat BFSI client. Map Tier 1-3 responses to business functions.',insight:'Resilience framing is the opening argument in every board-level security conversation.',badge:'🏛️'},
+  {id:'H02',leg:'H',name:'Map Resilience to Business Context',handson:'audit',activity:'Map resilience tiers to 5 core business functions: payments, customer data, trading, compliance reporting, operations.',insight:'Connecting resilience to revenue functions makes security budgets easier to justify.',badge:'🗺️'},
+  {id:'H03',leg:'H',name:'Resilience Model Sheet',handson:'deliverable',activity:'Produce a 1-page resilience architecture summary with tier definitions and business function mapping.',insight:'This becomes your leave-behind in any business continuity or IR retainer conversation.',badge:'📋'},
+  {id:'H04',leg:'H',name:'Map Resilience to NIST CSF',handson:'audit',activity:'Crosswalk resilience tiers against all 6 NIST CSF 2.0 functions: Govern, Identify, Protect, Detect, Respond, Recover.',insight:'NIST CSF is the universal translator between security teams and risk committees.',badge:'🔄'},
+  {id:'H05',leg:'H',name:'Simulate NIST Gap Assessment',handson:'audit',activity:'Run a scored NIST CSF gap assessment for a mock enterprise. Score each function 1-5, identify top 3 gaps per function.',insight:'A live gap assessment in a discovery call creates more urgency than any product slide.',badge:'🔎'},
+  {id:'H06',leg:'H',name:'NIST Crosswalk Sheet',handson:'deliverable',activity:'Produce a resilience vs NIST CSF mapping document reusable as an RFP compliance table.',insight:'Reusable crosswalk tables cut RFP response time from days to hours.',badge:'📊'},
+  {id:'H07',leg:'H',name:'Model MITRE Credential Compromise',handson:'audit',activity:'Map ATT&CK tactics for credential attacks. Identify T1078, T1110, T1003 kill chain with detection requirements.',insight:'Credential compromise is the #1 initial access vector — fluency here opens every detection conversation.',badge:'🔐'},
+  {id:'H08',leg:'H',name:'Map Telemetry to ATT&CK Techniques',handson:'audit',activity:'Identify required log sources per ATT&CK technique. Produce telemetry sufficiency matrix for top 20 techniques.',insight:'Telemetry gaps are where deals are won — showing a customer what they cannot see creates urgency.',badge:'📡'},
+  {id:'H09',leg:'H',name:'ATT&CK Mapping Sheet',handson:'deliverable',activity:'Produce technique-to-telemetry mapping table. Export as ATT&CK Navigator layer.',insight:'A Navigator heatmap handed to a SOC Lead in a discovery call is more powerful than a product demo.',badge:'🎯'},
+  {id:'H10',leg:'H',name:'Identify Detection Blind Spots',handson:'audit',activity:'Highlight coverage gaps for top 10 undetected ATT&CK techniques. Quantify dwell-time impact per gap.',insight:'Quantifying blind spots converts a technical gap into a business risk number.',badge:'🕳️'},
+  {id:'H11',leg:'H',name:'Map ATT&CK to NIST Detect',handson:'audit',activity:'Align techniques to CSF Detect subcategories (DE.AE, DE.CM, DE.DP). Identify monitoring gaps.',insight:'Cross-framework mapping demonstrates strategic depth — not just tool knowledge.',badge:'🔗'},
+  {id:'H12',leg:'H',name:'Detection Coverage Summary',handson:'deliverable',activity:'Produce 1-page detection gap report with top 10 blind spots and recommended detection investments.',insight:'A one-page gap summary is the fastest path from discovery to proposal.',badge:'📄'},
+  {id:'H13',leg:'H',name:'Select ISO Annex A Controls',handson:'audit',activity:'Choose 15 most relevant ISO 27001:2022 Annex A controls for a mock BFSI client. Justify with risk rationale.',insight:'ISO control selection fluency signals GRC maturity to compliance-driven buyers.',badge:'✅'},
+  {id:'H14',leg:'H',name:'Categorize ISO Controls (P/D/C)',handson:'audit',activity:'Classify each control as Preventive, Detective, or Corrective. Map to detection use cases.',insight:'P/D/C categorisation shows architectural thinking not just checkbox compliance.',badge:'🗂️'},
+  {id:'H15',leg:'H',name:'ISO Control Mapping Sheet',handson:'deliverable',activity:'Produce control-to-detection mapping cross-referenced with NIST CSF.',insight:'Cross-framework control mapping is a must-have asset for any regulated sector RFP.',badge:'📑'},
+  {id:'H16',leg:'H',name:'Draft Sample Risk Register',handson:'audit',activity:'Create a risk register with impact/likelihood scoring for 10 mock risks across 3 domains.',insight:'A risk register framing in a discovery call elevates you from vendor to advisor.',badge:'⚠️'},
+  {id:'H17',leg:'H',name:'Map Risk Treatment Decisions',handson:'audit',activity:'Assign mitigate/transfer/accept/avoid decision with business justification per risk.',insight:'Risk treatment vocabulary is the language CISOs use with their boards — speak it fluently.',badge:'🎲'},
+  {id:'H18',leg:'H',name:'Risk Treatment Summary',handson:'deliverable',activity:'Produce structured risk treatment document suitable for board reporting.',insight:'Board-ready risk documents position you as an extension of the CISO office.',badge:'📝'},
+  {id:'H19',leg:'H',name:'Map SOC 2 Trust Criteria',handson:'audit',activity:'Align Security, Availability, Confidentiality, Integrity, Privacy criteria to enterprise controls.',insight:'SOC 2 is the compliance currency of SaaS and cloud-first enterprises.',badge:'🛡️'},
+  {id:'H20',leg:'H',name:'Build SOC 2 Evidence Matrix',handson:'audit',activity:'Define logs, dashboards, reports, and alerts required per Trust Service Criterion.',insight:'Evidence matrix design is what separates audit preparation from audit panic.',badge:'🧮'},
+  {id:'H21',leg:'H',name:'SOC 2 Mapping Sheet',handson:'deliverable',activity:'Produce trust criteria mapping with evidence requirements per criterion.',insight:'A pre-built SOC 2 mapping sheet cuts a customer\'s audit prep time by weeks.',badge:'📌'},
+  {id:'H22',leg:'H',name:'Map Monitoring to SOC 2 Controls',handson:'audit',activity:'Identify measurable monitoring evidence per SOC 2 control. Define alert thresholds and cadence.',insight:'Connecting monitoring to audit evidence makes Splunk a compliance tool, not just a SIEM.',badge:'📈'},
+  {id:'H23',leg:'H',name:'Draft Audit Defense Narrative',handson:'deliverable',activity:'Write executive explanation of monitoring approach and evidence collection methodology.',insight:'Audit defense narratives are what CISOs rehearse before board meetings — help them prepare.',badge:'🎤'},
+  {id:'H24',leg:'H',name:'SOC 2 Evidence Summary',handson:'deliverable',activity:'Produce audit-ready summary document mapping controls to evidence artefacts.',insight:'A ready-made evidence summary accelerates deals in pre-audit situations.',badge:'🗃️'},
+  {id:'H25',leg:'H',name:'Design Resilience Maturity Ladder',handson:'audit',activity:'Define 5-stage resilience evolution (Ad Hoc → Optimised) with entry criteria per stage.',insight:'Maturity ladders give customers a roadmap — and a reason to invest in each stage.',badge:'🪜'},
+  {id:'H26',leg:'H',name:'Map Maturity to NIST & ISO',handson:'audit',activity:'Align each maturity stage to NIST CSF Tier and ISO 27001 control groupings.',insight:'Multi-framework maturity mapping is the architecture conversation CISOs want.',badge:'🔀'},
+  {id:'H27',leg:'H',name:'Maturity Framework Sheet',handson:'deliverable',activity:'Produce maturity ladder with stage definitions, controls mapping, and investment implications.',insight:'A maturity sheet handed at discovery creates the 12-month roadmap conversation.',badge:'📊'},
+  {id:'H28',leg:'H',name:'Define Enterprise KPI Stack',handson:'audit',activity:'Create detection, containment, recovery, governance metrics with measurement methodology.',insight:'KPI design shows you understand how security performance is measured at board level.',badge:'📏'},
+  {id:'H29',leg:'H',name:'Map KPIs to Financial Impact',handson:'audit',activity:'Draft cost vs risk reduction model. Quantify MTTD/MTTR improvement in breach cost avoidance.',insight:'Translating KPIs to financial impact is the CFO conversation most SAs cannot have.',badge:'💰'},
+  {id:'H30',leg:'H',name:'KPI & Financial Model',handson:'deliverable',activity:'Produce KPI + financial impact summary for CFO/CISO presentation.',insight:'A financial model attached to a proposal increases approval speed significantly.',badge:'💹'},
+  {id:'H31',leg:'H',name:'Write Architecture Trade-Off Cases',handson:'audit',activity:'Document cost vs security vs complexity tradeoffs across 5 architectural decisions.',insight:'Trade-off articulation is what separates an SA from a product rep.',badge:'⚖️'},
+  {id:'H32',leg:'H',name:'Draft 12-Month Roadmap',handson:'deliverable',activity:'Sequence security uplift across maturity stages with quarterly milestones and success metrics.',insight:'A 12-month roadmap converts a one-time sale into a multi-year partnership.',badge:'🗓️'},
+  {id:'H33',leg:'H',name:'Roadmap Sheet',handson:'deliverable',activity:'Produce structured 12-month transformation roadmap with phased deliverables and investment triggers.',insight:'Roadmap sheets become the reference document for every QBR conversation.',badge:'🛤️'},
+  {id:'H34',leg:'H',name:'Deliver 5-Minute Architecture Narrative',handson:'deliverable',activity:'Present full resilience framework in timed 5-min executive narrative. Record audio, self-score.',insight:'A rehearsed 5-minute narrative is your most powerful pre-meeting preparation habit.',badge:'⏱️'},
+  {id:'H35',leg:'H',name:'Board-Level Defense Simulation',handson:'audit',activity:'Answer 10 executive challenge questions under pressure. Defend tradeoffs, justify investments.',insight:'Board simulation practice is what gives you composure in real executive meetings.',badge:'🎭'},
+  {id:'H36',leg:'H',name:'Executive Defense Summary',handson:'deliverable',activity:'Produce final resilience narrative for board-level consumption. 1 page, no jargon.',insight:'A jargon-free 1-page summary is the most underrated SA deliverable.',badge:'📜'},
+  {id:'H37',leg:'H',name:'Security Architecture Decision Framework',handson:'audit',activity:'Build a decision matrix for architectural choices across identity, network, endpoint, cloud layers.',insight:'A structured decision framework turns architecture consultations into repeatable engagements.',badge:'🏗️'},
+  {id:'H38',leg:'H',name:'Security Architecture Trade-Off Modeling',handson:'audit',activity:'Model tradeoffs between build vs buy, on-prem vs cloud, single vendor vs multi-OEM.',insight:'Trade-off modeling fluency is what customers remember after you leave the room.',badge:'🔄'},
+  {id:'H39',leg:'H',name:'Control Failure Propagation Model',handson:'audit',activity:'Map how a single control failure propagates across detection, response, and compliance layers.',insight:'Failure propagation thinking demonstrates systems-level security architecture maturity.',badge:'🌊'},
+  {id:'H40',leg:'H',name:'Security Investment Optimization Model',handson:'deliverable',activity:'Build an investment prioritisation model: effort vs impact vs compliance vs risk reduction.',insight:'An investment optimisation model makes you the most useful person in a budget planning meeting.',badge:'📐'},
+  {id:'H41',leg:'H',name:'Zero Trust Architecture',handson:'audit',activity:'Score a mock enterprise against CISA ZT Maturity Model across all 5 pillars. Produce phased ZT roadmap.',insight:'ZT is the architecture conversation every enterprise wants — be the SA who can lead it.',badge:'🏛️'},
+  {id:'H42',leg:'H',name:'Identity-First Centric',handson:'audit',activity:'Design identity architecture for 1000-user hybrid enterprise: auth flows, PAM, SSO, federation.',insight:'Identity is the #1 ZT starting point — fluency here opens every CATO and PA conversation.',badge:'🪪'},
+  {id:'H43',leg:'H',name:'Cloud Security Governance',handson:'audit',activity:'Run multi-cloud posture assessment across AWS/Azure/GCP. Produce control ownership matrix per provider.',insight:'Cloud posture assessment is a discovery call accelerator in every cloud-first enterprise.',badge:'☁️'},
+  {id:'H44',leg:'H',name:'CIS Controls v8',handson:'audit',activity:'Run IG2 gap assessment for a mock 300-person NBFC. Score all 18 controls. Produce uplift roadmap.',insight:'CIS v8 is the most operationalised controls framework — gap assessments open SIEM deals.',badge:'🎛️'},
+  {id:'H45',leg:'H',name:'DORA + Sector Regulations',handson:'audit',activity:'Map DORA Chapter II requirements to NIST CSF. Crosswalk RBI CSF + SEBI + IRDAI guidelines.',insight:'Regulatory fluency unlocks BFSI budget — compliance is always funded even when security is not.',badge:'⚖️'},
+  {id:'H46',leg:'H',name:'AI & ML Security Governance',handson:'audit',activity:'Map OWASP Top 10 for LLMs to enterprise risk scenarios. Apply NIST AI RMF to a mock AI deployment.',insight:'AI security governance is the fastest growing board-level concern in 2026.',badge:'🤖'},
+  {id:'H47',leg:'H',name:'Threat Landscape 2026',handson:'deliverable',activity:'Produce a 1-page threat brief from CrowdStrike GTR + Mandiant M-Trends. Map top TTPs to OEM coverage.',insight:'A current threat brief as your EBC opener makes you the most credible person in the room.',badge:'🌐'},
+  {id:'H48',leg:'H',name:'Security Data Engineering & Observability',handson:'audit',activity:'Design security data pipeline: collection → normalisation → enrichment → SIEM → detection.',insight:'Data pipeline fluency positions Splunk as an architecture decision not just a tool purchase.',badge:'🔬'},
+  {id:'H49',leg:'H',name:'Incident Response Framework',handson:'audit',activity:'Design IR program using NIST SP 800-61 + SANS PICERL. Define SLAs, runbooks, MTTD/MTTR KPIs.',insight:'IR framework design is the conversation that connects SOAR investment to business outcomes.',badge:'🚨'},
+  {id:'H50',leg:'H',name:'Business Acumen & Stakeholder Mapping',handson:'deliverable',activity:'Build buyer persona profiles for CISO, CIO, CFO, SOC Lead. Map budget cycles and approval chains.',insight:'Stakeholder maps built before a meeting win more deals than decks built after.',badge:'👥'},
+  {id:'H51',leg:'H',name:'Competitive Positioning',handson:'deliverable',activity:'Map top 3 vendors per category (SIEM, XDR, SASE, TI). Write 3 win-theme statements per OEM.',insight:'Competitive positioning fluency is what separates confident SAs from reactive ones.',badge:'⚔️'},
+  {id:'H52',leg:'H',name:'Executive Storytelling',handson:'deliverable',activity:'Rewrite a proposal executive summary using Pyramid Principle + SCR framework. Time: 90 minutes.',insight:'The first paragraph of every proposal determines whether it gets read or skimmed.',badge:'✍️'},
+  {id:'H53',leg:'H',name:'Privacy — DPDP Act + GDPR',handson:'audit',activity:'Map DPDP Act obligations to enterprise security controls. Build GDPR-to-DPDP crosswalk.',insight:'DPDP fluency unlocks healthcare and BFSI deals where data protection is a board mandate.',badge:'🔏'},
+  {id:'H54',leg:'H',name:'SA Positioning & Thought Leadership',handson:'deliverable',activity:'Write your SA positioning statement. Map white paper angles to market gaps. Build a content calendar.',insight:'A clear personal positioning statement is what makes customers ask for you by name.',badge:'⭐'},
+  {id:'L01',leg:'L',sec:'Core Detection',name:'Build Detection Use-Case: Credential Abuse',handson:'lab',activity:'Draft detection logic with signals, thresholds, enrichment sources, and response actions for credential abuse scenarios.',insight:'A well-structured detection use-case card is your proof of engineering depth in any technical eval.',badge:'🔍'},
+  {id:'L02',leg:'L',sec:'Core Detection',name:'Map Use-Case to MITRE Techniques',handson:'lab',activity:'Align detection logic to T1078, T1110, T1003. Verify telemetry requirements per technique.',insight:'MITRE mapping turns a detection rule into a defensible architectural decision.',badge:'🗺️'},
+  {id:'L03',leg:'L',sec:'Core Detection',name:'Detection Design Sheet (MVD)',handson:'deliverable',activity:'Produce structured use-case card: trigger, data source, rule logic, MITRE tags, response action.',insight:'A reusable detection design sheet is your fastest path from customer requirement to proposal.',badge:'📋'},
+  {id:'L04',leg:'L',sec:'Core Detection',name:'Create Telemetry Inventory',handson:'audit',activity:'List log sources available vs required for top 20 detection use cases. Identify coverage gaps by source type.',insight:'Telemetry inventory is the first thing a mature SOC needs — and the first gap most have.',badge:'📡'},
+  {id:'L05',leg:'L',sec:'Core Detection',name:'Build Telemetry Sufficiency Matrix',handson:'audit',activity:'Map available logs to ATT&CK techniques. Identify techniques with insufficient telemetry coverage.',insight:'A sufficiency matrix handed to a SOC Lead creates immediate investment urgency.',badge:'🧮'},
+  {id:'L06',leg:'L',sec:'Core Detection',name:'Telemetry Gap Summary (MVD)',handson:'deliverable',activity:'Produce 1-page telemetry gap sheet with prioritised collection investments and data source acquisition roadmap.',insight:'Gap summaries are the discovery output that accelerates proposals.',badge:'📊'},
+  {id:'L07',leg:'L',sec:'Core Detection',name:'Design Dwell-Time Reduction Model',handson:'audit',activity:'Simulate alert-to-containment timeline compression across 5 incident types. Identify where time is lost.',insight:'Dwell time reduction is the ROI argument every CISO can take to their CFO.',badge:'⏱️'},
+  {id:'L08',leg:'L',sec:'Core Detection',name:'Write Escalation & Response Workflow',handson:'deliverable',activity:'Draft SOC triage to escalation to containment model with SLA definitions and alert routing logic.',insight:'A documented escalation workflow is what turns a SOAR demo into a deployment conversation.',badge:'📤'},
+  {id:'L09',leg:'L',sec:'Core Detection',name:'Dwell-Time Framework (MVD)',handson:'deliverable',activity:'Produce dwell-time reduction sheet with current vs target MTTD/MTTR and improvement roadmap.',insight:'MTTD/MTTR benchmarks are the metrics every board asks about after a breach.',badge:'⚡'},
+  {id:'L10',leg:'L',sec:'Core Detection',name:'Model Lateral Movement Detection',handson:'lab',activity:'Design detection signals for T1021, T1550, T1075. Build Splunk SPL queries for each technique.',insight:'Lateral movement detection is the technical depth signal that wins enterprise SOC deals.',badge:'🔀'},
+  {id:'L11',leg:'L',sec:'Core Detection',name:'Create MITRE Coverage % Model',handson:'audit',activity:'Estimate detection coverage % across lateral movement scenarios. Score per technique group.',insight:'A coverage percentage model is the most compelling visual you can show a CISO.',badge:'📈'},
+  {id:'L12',leg:'L',sec:'Core Detection',name:'Coverage Dashboard Draft (MVD)',handson:'deliverable',activity:'Produce coverage metrics summary with heatmap of detected vs undetected techniques.',insight:'A detection heatmap is your most reusable portfolio asset across every SOC deal.',badge:'🗺️'},
+  {id:'L13',leg:'L',sec:'Core Detection',name:'Define Detection KPI Stack',handson:'audit',activity:'Define MTTD, MTTR, false positive %, containment speed, alert-to-ticket ratio with measurement methodology.',insight:'KPI definitions separate a managed SOC conversation from a tool sale.',badge:'📏'},
+  {id:'L14',leg:'L',sec:'Core Detection',name:'Design Alert Fatigue Reduction Logic',handson:'lab',activity:'Create suppression, prioritisation, and tuning model for high-volume alert environments.',insight:'Alert fatigue is the #1 pain point in every mature SOC — solving it wins loyalty.',badge:'🔕'},
+  {id:'L15',leg:'L',sec:'Core Detection',name:'Detection KPI Summary (MVD)',handson:'deliverable',activity:'Produce detection performance sheet with KPI definitions, current vs target, and improvement actions.',insight:'A KPI summary turns a monthly SOC review into a strategic business conversation.',badge:'📌'},
+  {id:'L16',leg:'L',sec:'Core Detection',name:'Define Log Normalization Strategy',handson:'lab',activity:'Identify parsing, enrichment, normalisation requirements for top 5 log source types. Map to Splunk CIM fields.',insight:'Log normalisation fluency separates SAs who understand data from those who understand tools.',badge:'🔧'},
+  {id:'L17',leg:'L',sec:'Core Detection',name:'Design Data Retention Strategy',handson:'audit',activity:'Map retention requirements to DORA, RBI, ISO 27001. Define hot/warm/cold storage tiers.',insight:'Retention strategy tied to regulations converts a technical decision into a compliance mandate.',badge:'💾'},
+  {id:'L18',leg:'L',sec:'Core Detection',name:'Log Strategy Summary (MVD)',handson:'deliverable',activity:'Produce log architecture overview with collection policy, normalisation standards, retention tiers and sizing.',insight:'A log strategy document proves you understand data engineering, not just SIEM.',badge:'📑'},
+  {id:'L19',leg:'L',sec:'Core Detection',name:'Build Threat Scenario Library (5 Cases)',handson:'lab',activity:'Document structured scenario sheets for ransomware, credential abuse, lateral movement, exfiltration, insider threat.',insight:'A scenario library is your pre-built discovery toolkit — pull scenarios that match customer pain.',badge:'📚'},
+  {id:'L20',leg:'L',sec:'Core Detection',name:'Map Scenarios to Telemetry',handson:'audit',activity:'Align each attack scenario to required data sources. Validate telemetry sufficiency per scenario.',insight:'Scenario-to-telemetry mapping proves you understand detection from the attacker perspective.',badge:'🔍'},
+  {id:'L21',leg:'L',sec:'Core Detection',name:'Scenario Library Sheet (MVD)',handson:'deliverable',activity:'Produce scenario compendium: each scenario with MITRE tags, data source, detection rule, response action.',insight:'A scenario library shared in a workshop creates instant credibility.',badge:'📖'},
+  {id:'L22',leg:'L',sec:'Core Detection',name:'Simulate Incident Post-Mortem',handson:'audit',activity:'Write structured incident retrospective for ransomware scenario. Include full timeline reconstruction.',insight:'Post-mortem fluency shows customers you think about what happens after detection, not just before.',badge:'🔭'},
+  {id:'L23',leg:'L',sec:'Core Detection',name:'Identify Detection Failure Points',handson:'audit',activity:'Document breakdowns: missed signals, late escalation, telemetry gaps, tuning failures.',insight:'Failure point analysis makes your detection architecture recommendations credible.',badge:'⚠️'},
+  {id:'L24',leg:'L',sec:'Core Detection',name:'Post-Mortem Framework (MVD)',handson:'deliverable',activity:'Produce improvement recommendation sheet with root cause categories, uplift actions, and owner assignments.',insight:'A post-mortem framework proves you understand detection operations, not just rules.',badge:'🔄'},
+  {id:'L25',leg:'L',sec:'Core Detection',name:'Map Detection to NIST Detect & Respond',handson:'audit',activity:'Align detection use cases to CSF Detect subcategories (DE.AE, DE.CM, DE.DP). Validate against ISO 27001 & SOC 2.',insight:'Framework-aligned detection mapping makes a SIEM investment compliance-defensible.',badge:'🗂️'},
+  {id:'L26',leg:'L',sec:'Validation & Arch',name:'Validate Against ISO & SOC Monitoring',handson:'audit',activity:'Validate detection use cases against ISO 27001 Annex A monitoring controls and SOC 2 Trust Service Criteria.',insight:'ISO + SOC 2 validation turns a detection inventory into an audit-ready compliance artefact.',badge:'✅'},
+  {id:'L27',leg:'L',sec:'Validation & Arch',name:'Framework Validation Sheet (MVD)',handson:'deliverable',activity:'Produce detection compliance validation sheet mapping use cases to NIST, ISO, and SOC 2 with gap indicators.',insight:'A framework validation sheet is what gets a detection program taken seriously by auditors.',badge:'📋'},
+  {id:'L28',leg:'L',sec:'Validation & Arch',name:'Build End-to-End Detection Architecture (Block 1)',handson:'lab',activity:'Design the full detection architecture: data collection, normalisation, enrichment, SIEM correlation, alerting, response orchestration.',insight:'End-to-end architecture thinking separates a detection engineer from a rule writer.',badge:'🏗️'},
+  {id:'L29',leg:'L',sec:'Validation & Arch',name:'Build End-to-End Detection Architecture (Block 2)',handson:'lab',activity:'Extend architecture with OEM placement: Splunk SIEM, BluSapphire XDR, PA NGFW network, CloudSEK TI enrichment.',insight:'OEM-mapped architecture diagrams are your most reusable technical pre-sales asset.',badge:'🔗'},
+  {id:'L30',leg:'L',sec:'Validation & Arch',name:'Validate Architecture Against MITRE Coverage',handson:'audit',activity:'Score end-to-end architecture against top 20 ATT&CK techniques. Identify undetected techniques and root cause.',insight:'A MITRE-validated architecture is defensible in front of a CISO, a board, and an auditor.',badge:'🎯'},
+  {id:'L31',leg:'L',sec:'Validation & Arch',name:'Detection Architecture Summary (MVD)',handson:'deliverable',activity:'Produce 2-page unified detection architecture with MITRE coverage scores, framework alignment, OEM placement.',insight:'A detection architecture summary is the technical anchor for every SOC modernisation proposal.',badge:'📊'},
+  {id:'L32',leg:'L',sec:'Simulation',name:'Simulate Enterprise Breach Scenario (Execution)',handson:'audit',activity:'Run tabletop: credential compromise to lateral movement to ransomware deployment to containment.',insight:'Adversary simulation experience is the most direct path to credible detection architecture recommendations.',badge:'🔥'},
+  {id:'L33',leg:'L',sec:'Simulation',name:'Simulate Enterprise Breach Scenario (MVD)',handson:'deliverable',activity:'Produce structured simulation outcome: kill chain stages, detection lag per stage, missed signals, recommended investments.',insight:'A simulation outcome sheet creates more urgency in a discovery call than any benchmark statistic.',badge:'💥'},
+  {id:'L34',leg:'L',sec:'Simulation',name:'Breach Simulation Report (MVD)',handson:'deliverable',activity:'Produce full breach simulation report: executive narrative, technical findings, root cause categories, 90-day uplift plan.',insight:'A breach simulation report is the closest thing to a red team outcome an SA can produce independently.',badge:'📄'},
+  {id:'L35',leg:'L',sec:'Simulation',name:'Quantify Detection Maturity Score',handson:'audit',activity:'Score detection coverage, response speed, telemetry sufficiency across simulated scenario.',insight:'A quantified maturity score gives a CISO a defensible baseline for budget conversations.',badge:'📏'},
+  {id:'L36',leg:'L',sec:'Simulation',name:'Identify Top 5 Structural Weaknesses',handson:'audit',activity:'Prioritise 5 most impactful detection gaps by business risk. Quantify dwell-time and breach cost impact.',insight:'A prioritised weakness list is the discovery output that converts interest into a proposal request.',badge:'⚠️'},
+  {id:'L37',leg:'L',sec:'Simulation',name:'Detection Improvement Roadmap (MVD)',handson:'deliverable',activity:'Produce 6-month detection uplift plan with owners, timeline, investment requirements, and success metrics.',insight:'A detection roadmap hands a CISO the 90-day plan they need to take to their board.',badge:'🛤️'},
+  {id:'L38',leg:'L',sec:'Simulation',name:'Executive Detection Defense Simulation',handson:'audit',activity:'Simulate defending detection architecture to a mock CISO/board. Answer 8 challenge questions.',insight:'Executive defense practice gives you poise when a CISO challenges your architecture with stakeholders present.',badge:'🎭'},
+  {id:'L39',leg:'L',sec:'Simulation',name:'Respond to "Why Invest More?" Challenge',handson:'deliverable',activity:'Write and rehearse a 3-minute structured response to: "Why invest more in detection when we already have tools?"',insight:'A rehearsed Why Invest More response is your most commercially valuable deliverable from the Left Leg.',badge:'💬'},
+  {id:'L40',leg:'L',sec:'Simulation',name:'Executive Defense Summary (MVD)',handson:'deliverable',activity:'Produce 1-page executive detection defense summary: coverage score, top 3 risks, recommended investments, expected outcomes.',insight:'A 1-page executive defense summary is what gets shared in a board pack after your presentation.',badge:'📜'},
+  {id:'L41',leg:'L',sec:'OEM Hands-On',name:'Splunk SPL Fundamentals',handson:'lab',activity:'Write 10 production-ready SPL queries on BOTS dataset: auth failures, lateral movement, DNS anomaly, exfiltration, process injection.',insight:'SPL fluency is the single most visible technical credibility signal in any Splunk evaluation.',badge:'🔎'},
+  {id:'L42',leg:'L',sec:'OEM Hands-On',name:'Splunk Enterprise Security + RBA',handson:'lab',activity:'Configure ES data models, Content Update, RBA risk rules for T1078 and T1059.',insight:'RBA moves a customer from alert volume to risk prioritisation — that is the SOC transformation story.',badge:'🛡️'},
+  {id:'L43',leg:'L',sec:'OEM Hands-On',name:'SOAR Phishing Response Playbook',handson:'lab',activity:'Build phishing response playbook: email receipt to sandbox detonation to IOC extraction to block to user notify to case close.',insight:'A runnable phishing playbook converts MTTR from hours to minutes.',badge:'🎣'},
+  {id:'L44',leg:'L',sec:'OEM Hands-On',name:'SOAR Ransomware Containment Playbook',handson:'lab',activity:'Design cross-OEM ransomware playbook: Splunk ES alert to BluSapphire isolation to PA block to CloudSEK enrichment.',insight:'A 5-OEM ransomware story is your most powerful demo narrative.',badge:'💀'},
+  {id:'L45',leg:'L',sec:'OEM Hands-On',name:'Palo Alto NGFW Deep Dive',handson:'lab',activity:'Configure PA security policy: App-ID rules, User-ID mapping, Security Profiles (AV, IPS, URL), log forwarding to Splunk.',insight:'PA NGFW hands-on configuration separates SAs who have used it from those who have only read about it.',badge:'🔥'},
+  {id:'L46',leg:'L',sec:'OEM Hands-On',name:'CATO SASE Architecture',handson:'lab',activity:'Design CATO deployment for 500-user hybrid workforce. Configure ZTNA access policy for 5 user categories.',insight:'CATO architecture fluency turns a product demo into a branch transformation consultation.',badge:'🌐'},
+  {id:'L47',leg:'L',sec:'OEM Hands-On',name:'CloudSEK XVigil — Digital Risk Intelligence',handson:'lab',activity:'Configure XVigil for domain monitoring, credential exposure tracking, brand impersonation for mock BFSI client.',insight:'Showing a CISO their own exposed credentials in 10 minutes creates more urgency than any slide deck.',badge:'👁️'},
+  {id:'L48',leg:'L',sec:'OEM Hands-On',name:'CloudSEK BeVigil — Mobile & Supply Chain',handson:'lab',activity:'Scan 2 apps for API key leakage, hardcoded credentials, third-party library risks.',insight:'Supply chain risk visibility is the discovery question no CISO has a confident answer to.',badge:'📱'},
+  {id:'L49',leg:'L',sec:'OEM Hands-On',name:'BluSapphire XDR Detection & Response',handson:'lab',activity:'Map BluSapphire telemetry sources (endpoint, network, identity). Configure lateral movement detection.',insight:'BluSapphire + Splunk integration is the XDR story that differentiates your stack.',badge:'💎'},
+  {id:'L50',leg:'L',sec:'OEM Hands-On',name:'SOAR Platform Hands-On — Splunk SOAR',handson:'lab',activity:'Install Splunk SOAR community edition. Configure Splunk integration. Build phishing playbook.',insight:'Building a live playbook changes your credibility from conceptual to operational instantly.',badge:'⚡'},
+  {id:'L51',leg:'L',sec:'OEM Hands-On',name:'IAM Hands-On — Azure AD & Okta',handson:'lab',activity:'Configure Azure AD conditional access: enforce MFA for privileged roles, block legacy auth, require compliant device.',insight:'IAM hands-on configuration is what makes your ZT architecture recommendation trustworthy.',badge:'🔑'},
+  {id:'L52',leg:'L',sec:'OEM Hands-On',name:'SIGMA Rules + Detection-as-Code',handson:'lab',activity:'Write SIGMA rules for T1059, T1078, T1190, T1055, T1003. Validate on uncoder.io.',insight:'Writing a SIGMA rule live in a technical evaluation earns more credibility than any certification badge.',badge:'📐'},
+  {id:'L53',leg:'L',sec:'OEM Hands-On',name:'Full OEM Stack Integration',handson:'lab',activity:'Trace ransomware end-to-end: CloudSEK TI to PA NGFW block to BluSapphire detection to Splunk correlation to SOAR containment.',insight:'A 5-OEM integrated story is the flagship technical narrative.',badge:'🔗'},
+  {id:'R01',leg:'R',name:'Define Enterprise Security Architecture Layers',handson:'deliverable',activity:'Map identity, device, network, application, data, visibility layers. Assign controls to each layer.',insight:'Layered architecture thinking positions you as an architect not a vendor rep.',badge:'🏗️'},
+  {id:'R02',leg:'R',name:'Map Controls to Architecture Layers',handson:'audit',activity:'Align OEM portfolio controls to each architecture layer for a 500-user enterprise.',insight:'Control-to-layer mapping is the visual that makes complex architectures simple for CISOs.',badge:'🗂️'},
+  {id:'R03',leg:'R',name:'Architecture Layering Sheet',handson:'deliverable',activity:'Produce layered enterprise security reference architecture with OEM placement and integration flows.',insight:'A reference architecture diagram is your most reusable visual asset across all enterprise deals.',badge:'📊'},
+  {id:'R04',leg:'R',name:'Draft Detection-Centric Solution Narrative',handson:'deliverable',activity:'Write solution pitch: problem → gap → solution → outcome in customer-facing language. Under 1 page.',insight:'A detection-centric narrative that starts with business risk wins more than one that starts with features.',badge:'✍️'},
+  {id:'R05',leg:'R',name:'Map Narrative to ISO & SOC 2 Controls',handson:'audit',activity:'Align pitch to ISO Annex A and SOC 2 Trust Service Criteria.',insight:'Compliance-aligned narratives unlock procurement approval in regulated sector deals.',badge:'🔀'},
+  {id:'R06',leg:'R',name:'Compliance-Aligned Solution Sheet',handson:'deliverable',activity:'Produce 1-page compliance-aligned solution summary for BFSI/regulated sector deals.',insight:'A compliance-aligned summary is the shortcut from technical evaluation to legal and procurement.',badge:'📄'},
+  {id:'R07',leg:'R',name:'Build Sample RFP Response Structure',handson:'deliverable',activity:'Create RFP template: Overview → Technical Approach → Compliance Mapping → OEM Architecture → Pricing.',insight:'A reusable RFP structure reduces response time from 3 days to 4 hours.',badge:'🗃️'},
+  {id:'R08',leg:'R',name:'Write Monitoring & Detection Section',handson:'deliverable',activity:'Draft RFP response explaining monitoring approach, detection use cases, and OEM capability alignment.',insight:'A well-written monitoring section is what separates winning RFPs from shortlisted ones.',badge:'📝'},
+  {id:'R09',leg:'R',name:'RFP Monitoring Response',handson:'deliverable',activity:'Produce structured RFP monitoring section template reusable across SIEM/SOC/XDR tenders.',insight:'A pre-built RFP section is your most time-saving pre-sales asset.',badge:'📌'},
+  {id:'R10',leg:'R',name:'Design 12-Month Security Transformation Roadmap',handson:'deliverable',activity:'Sequence uplift: Detection → Response → Prevention → Governance with quarterly milestones.',insight:'A transformation roadmap converts a one-time purchase into a multi-year partnership conversation.',badge:'🗓️'},
+  {id:'R11',leg:'R',name:'Map Roadmap to Maturity Ladder',handson:'audit',activity:'Align each roadmap phase to maturity stage. Define entry/exit criteria with measurable outcomes.',insight:'Maturity-aligned roadmaps give customers a journey not just a destination.',badge:'🪜'},
+  {id:'R12',leg:'R',name:'Transformation Roadmap Sheet',handson:'deliverable',activity:'Produce phased roadmap with milestones, OEM deployment sequence, and investment-per-phase breakdown.',insight:'A phased investment roadmap is the document that makes CFOs say yes.',badge:'🛤️'},
+  {id:'R13',leg:'R',name:'Build Executive Architecture Deck Outline',handson:'deliverable',activity:'Outline 8-10 slide deck: Business Risk → Gap → Architecture → OEM Stack → Roadmap → Investment.',insight:'An executive deck outline built before the meeting ends the meeting with a next step.',badge:'🎯'},
+  {id:'R14',leg:'R',name:'Create Budget Justification Logic',handson:'deliverable',activity:'Translate architecture investment to cost avoided: breach cost, compliance penalty, FTE efficiency.',insight:'Budget justification logic turns a CISO advocate into a CFO-approved project.',badge:'💰'},
+  {id:'R15',leg:'R',name:'Executive Pitch Summary',handson:'deliverable',activity:'Produce executive-ready solution summary with architecture diagram, investment ask, and 3-year outcomes.',insight:'A 1-page executive summary is the document that gets forwarded to the board.',badge:'📜'},
+  {id:'R16',leg:'R',name:'Draft Control Gap Remediation Plan',handson:'deliverable',activity:'Write structured remediation with prioritised actions, owners, timeline, and effort rating.',insight:'A remediation plan positions you as a partner in fixing the problem, not just identifying it.',badge:'🔧'},
+  {id:'R17',leg:'R',name:'Map Remediation to Business Risk',handson:'audit',activity:'Tie each remediation action to quantified business impact: risk reduction %, compliance fine avoided.',insight:'Business-risk-mapped remediation makes security investment conversations CFO-friendly.',badge:'📊'},
+  {id:'R18',leg:'R',name:'Remediation Strategy Sheet',handson:'deliverable',activity:'Produce gap remediation summary with effort vs impact matrix and stakeholder-ready narrative.',insight:'An effort vs impact matrix is the fastest way to prioritise security investments with a customer.',badge:'⚖️'},
+  {id:'R19',leg:'R',name:'Discovery Call Framework + BoM/BoQ',handson:'deliverable',activity:'Build 20-question discovery framework across environment, pain, compliance, commercial. Build BoM.',insight:'A structured discovery framework ensures you never leave a first call without information to write a proposal.',badge:'🗺️'},
+  {id:'R20',leg:'R',name:'TCO/ROI Investment Model',handson:'deliverable',activity:'Build 3-year TCO model for Splunk ES vs QRadar. Calculate ROI%, break-even year, FTE efficiency gains.',insight:'A TCO/ROI model is the document that ends the price objection conversation.',badge:'💹'},
+  {id:'R21',leg:'R',name:'Splunk POC Playbook',handson:'deliverable',activity:'Define 5 POC test scenarios, success criteria, timeline, and customer sign-off checklist.',insight:'A POC playbook with defined success criteria reduces POC-to-close time significantly.',badge:'🧪'},
+  {id:'R22',leg:'R',name:'SOAR Demo Script + Objection Guide',handson:'deliverable',activity:'Script phishing response demo. Prepare confident answers for top 7 SOAR objections.',insight:'A scripted demo with a pre-built objection guide means you are never caught off-guard.',badge:'🎬'},
+  {id:'R23',leg:'R',name:'PA NGFW + CATO SASE Demo Scripts',handson:'deliverable',activity:'Script 10-min PA NGFW demo and 10-min CATO SASE demo. Include objection handling per OEM.',insight:'A 3-OEM demo library gives you coverage across every buyer persona in the same account.',badge:'🎥'},
+  {id:'R24',leg:'R',name:'Competitive Battlecards',handson:'deliverable',activity:'Build Splunk vs Sentinel and CATO vs Zscaler battlecards with displacement plays and pricing narrative.',insight:'A battlecard in your pocket means you never lose on competitive ground you could have prepared for.',badge:'🃏'},
+  {id:'R25',leg:'R',name:'Workshop Facilitation Guide',handson:'deliverable',activity:'Design half-day SOC assessment workshop. Run mock EBC: deliver recommendation, handle 5 challenges.',insight:'A facilitated workshop does in 4 hours what a 6-month evaluation tries to do.',badge:'🏫'},
+  {id:'R26',leg:'R',name:'SOC Modernisation Case Study',handson:'deliverable',activity:'Write BFSI SOC modernisation story: before-state, 5-OEM architecture, milestones, measurable outcomes.',insight:'A case study is your answer to every "can you show me a reference customer?" question.',badge:'📖'},
+  {id:'R27',leg:'R',name:'Portfolio Review + 60-Day Learning Summary',handson:'deliverable',activity:'Review all completed topics. Select top 10 reusable assets. Write SAIL retrospective and 90-day plan.',insight:'A portfolio review turns 45 days of learning into a structured capability statement.',badge:'🏆'},
+  {id:'R28',leg:'R',sec:'Demo',name:'Splunk ES / SIEM Demo Script + Objection Guide',handson:'deliverable',activity:'Script a full 20-min Splunk ES demo: open with business risk, show RBA risk score spike, pivot to MITRE heatmap. Prepare responses for top 8 Splunk objections.',insight:'Splunk is your flagship product and a scripted demo with pre-built objection handling is the single biggest commercial gap in most SAs toolkit.',badge:'🎬'},
+  {id:'R29',leg:'R',sec:'Competitive',name:'Expanded Competitive Battlecards (PA, CloudSEK, BluSapphire)',handson:'deliverable',activity:'Build 3 battlecards: PA NGFW vs Fortinet; CloudSEK vs Recorded Future; BluSapphire XDR vs CrowdStrike Falcon.',insight:'Every competitive situation you are not prepared for is a deal you lose on ground you could have defended.',badge:'⚔️'},
+  {id:'R30',leg:'R',sec:'Post-Sale',name:'QBR Framework + Renewal Narrative',handson:'deliverable',activity:'Design complete QBR structure with metrics review, value scorecard, expansion triggers, and 3-minute renewal pitch.',insight:'A QBR framework is what separates SAs who close once from those who build 3-year account revenue.',badge:'📈'},
+  {id:'R31',leg:'R',sec:'Vertical',name:'BFSI Vertical Solution Play',handson:'deliverable',activity:'Build a BFSI-specific solution play: map RBI CSF + DORA + SEBI obligations to your 5-OEM stack.',insight:'A vertical solution play is the difference between a generic pitch and one a BFSI CISO feels was built specifically for them.',badge:'🏦'},
+  {id:'R32',leg:'R',sec:'Executive',name:'EBC / Executive Briefing Guide',handson:'deliverable',activity:'Design a complete EBC playbook: pre-EBC prep, opening narrative, discovery segment, architecture recommendation, handling executive challenges, post-EBC follow-up.',insight:'An EBC run well is a 90-minute shortcut to what a 6-month evaluation tries to decide.',badge:'🎯'},
+];
+
+const SCHEDULE = [
+{w:1,label:'Week 1',dates:'Apr 1–3',milestone:null,days:[
+  {d:1,date:'Apr 1',dow:'Wed',topics:['H01','H02','L01']},
+  {d:2,date:'Apr 2',dow:'Thu',topics:['H03','L02','L03']},
+  {d:3,date:'Apr 3',dow:'Fri',topics:['H04','R01','R02']},
+]},
+{w:2,label:'Week 2',dates:'Apr 6–10',milestone:null,days:[
+  {d:4,date:'Apr 6',dow:'Mon',topics:['H05','H06','L04']},
+  {d:5,date:'Apr 7',dow:'Tue',topics:['H07','L05','L06']},
+  {d:6,date:'Apr 8',dow:'Wed',topics:['H08','R03','R04']},
+  {d:7,date:'Apr 9',dow:'Thu',topics:['H09','H10','L07']},
+  {d:8,date:'Apr 10',dow:'Fri',topics:['H11','L08','R05']},
+]},
+{w:3,label:'Week 3',dates:'Apr 13–17',milestone:'🎯 15-Day Check — Resilience · NIST · MITRE · ISO foundations',days:[
+  {d:9,date:'Apr 13',dow:'Mon',topics:['H12','H13','L09']},
+  {d:10,date:'Apr 14',dow:'Tue',topics:['H14','L10','L11']},
+  {d:11,date:'Apr 15',dow:'Wed',topics:['H15','R06','R07']},
+  {d:12,date:'Apr 16',dow:'Thu',topics:['H16','L12','L13']},
+  {d:13,date:'Apr 17',dow:'Fri',topics:['H17','R08','R09']},
+]},
+{w:4,label:'Week 4',dates:'Apr 20–24',milestone:null,days:[
+  {d:14,date:'Apr 20',dow:'Mon',topics:['H18','H19','L14']},
+  {d:15,date:'Apr 21',dow:'Tue',topics:['H20','L15','L16']},
+  {d:16,date:'Apr 22',dow:'Wed',topics:['H21','R10','R11']},
+  {d:17,date:'Apr 23',dow:'Thu',topics:['H22','L17','L18']},
+  {d:18,date:'Apr 24',dow:'Fri',topics:['H23','R12','R13']},
+]},
+{w:5,label:'Week 5',dates:'Apr 27–May 1',milestone:'🎯 25-Day Check — SOC 2 · KPIs · Maturity · Roadmaps',days:[
+  {d:19,date:'Apr 27',dow:'Mon',topics:['H24','H25','L19']},
+  {d:20,date:'Apr 28',dow:'Tue',topics:['H26','L20','L21']},
+  {d:21,date:'Apr 29',dow:'Wed',topics:['H27','R14','R15']},
+  {d:22,date:'Apr 30',dow:'Thu',topics:['H28','H29','L22']},
+  {d:23,date:'May 1',dow:'Fri',topics:['H30','L23','L24']},
+]},
+{w:6,label:'Week 6',dates:'May 4–8',milestone:null,days:[
+  {d:24,date:'May 4',dow:'Mon',topics:['H31','H32','L25']},
+  {d:25,date:'May 5',dow:'Tue',topics:['H33','L26','L27']},
+  {d:26,date:'May 6',dow:'Wed',topics:['H34','H35','R16']},
+  {d:27,date:'May 7',dow:'Thu',topics:['H36','L28','L29']},
+  {d:28,date:'May 8',dow:'Fri',topics:['H37','R17','R18']},
+]},
+{w:7,label:'Week 7',dates:'May 11–15',milestone:'🎯 35-Day Check — Architecture · Trade-offs · ZT · Simulation',days:[
+  {d:29,date:'May 11',dow:'Mon',topics:['H38','H39','L30']},
+  {d:30,date:'May 12',dow:'Tue',topics:['H40','L31','R19']},
+  {d:31,date:'May 13',dow:'Wed',topics:['H41','H42','L32']},
+  {d:32,date:'May 14',dow:'Thu',topics:['H43','L33','L34']},
+  {d:33,date:'May 15',dow:'Fri',topics:['H44','L35','R20']},
+]},
+{w:8,label:'Week 8',dates:'May 18–22',milestone:null,days:[
+  {d:34,date:'May 18',dow:'Mon',topics:['H45','H46','L36']},
+  {d:35,date:'May 19',dow:'Tue',topics:['H47','L37','R21']},
+  {d:36,date:'May 20',dow:'Wed',topics:['H48','L38','L39']},
+  {d:37,date:'May 21',dow:'Thu',topics:['H49','H50','L40']},
+  {d:38,date:'May 22',dow:'Fri',topics:['H51','R22','R23']},
+]},
+{w:9,label:'Week 9',dates:'May 25–29',milestone:'🎯 45-Day Check — All Horizontal + Detection Architecture complete',days:[
+  {d:39,date:'May 25',dow:'Mon',topics:['H52','H53','L41']},
+  {d:40,date:'May 26',dow:'Tue',topics:['H54','L42','R24']},
+  {d:41,date:'May 27',dow:'Wed',topics:['L43','L44','R25']},
+  {d:42,date:'May 28',dow:'Thu',topics:['L45','L46','R28']},
+  {d:43,date:'May 29',dow:'Fri',topics:['L47','L48','R29']},
+]},
+{w:10,label:'Week 10',dates:'Jun 1–5',milestone:null,days:[
+  {d:44,date:'Jun 1',dow:'Mon',topics:['L49','L50']},
+  {d:45,date:'Jun 2',dow:'Tue',topics:['L51','L52']},
+  {d:46,date:'Jun 3',dow:'Wed',topics:['L53','R26','R30']},
+  {d:47,date:'Jun 4',dow:'Thu',topics:['R27','R31']},
+  {d:48,date:'Jun 5',dow:'Fri',topics:['R32']},
+]},
+{w:11,label:'Week 11',dates:'Jun 8–12',milestone:'🎯 55-Day Check — All OEM hands-on + full Right Leg complete',days:[
+  {d:49,date:'Jun 8',dow:'Mon',topics:null,special:'🔄 Integration Day + 🧠 Horizontal Synthesis'},
+  {d:50,date:'Jun 9',dow:'Tue',topics:null,special:'🔧 Left Leg Synthesis — Core Detection (L01–L25)'},
+  {d:51,date:'Jun 10',dow:'Wed',topics:null,special:'🏗️ Left Leg Synthesis — Architecture & Simulation (L26–L40)'},
+  {d:52,date:'Jun 11',dow:'Thu',topics:null,special:'⚡ Left Leg Synthesis — OEM Hands-On (L41–L53)'},
+  {d:53,date:'Jun 12',dow:'Fri',topics:null,special:'🎯 Right Leg Synthesis — All 32 R topics'},
+]},
+{w:12,label:'Week 12',dates:'Jun 15–19',milestone:'🎯 58-Day Check — Mock Presentations',days:[
+  {d:54,date:'Jun 15',dow:'Mon',topics:null,special:'🎤 Mock Presentation #1 — BFSI SOC Modernisation (45 min)'},
+  {d:55,date:'Jun 16',dow:'Tue',topics:null,special:'🎤 Mock Presentation #2 — ZT + SASE Architecture (30 min)'},
+  {d:56,date:'Jun 17',dow:'Wed',topics:null,special:'💡 Gap Review — Address lowest-scoring assessment areas'},
+  {d:57,date:'Jun 18',dow:'Thu',topics:null,special:'📝 Final Assessment Prep — Review all 9 weekly scores'},
+  {d:58,date:'Jun 19',dow:'Fri',topics:null,special:'📝 Final Assessment — All 134 topics synthesis'},
+]},
+{w:13,label:'Week 13',dates:'Jun 22–23',milestone:'🏆 D-Day — Jun 23, 2026',days:[
+  {d:59,date:'Jun 22',dow:'Mon',topics:null,special:'🔄 SAIL Retrospective — Full 60-day reflection'},
+  {d:60,date:'Jun 23',dow:'Tue',topics:null,special:'🎓 Graduation + Phase 2 Planning Session'},
+]}
+];
+
+const ASSESSMENTS = [
+{w:1,title:'Week 1 — Resilience · NIST CSF · Core Detection Foundations',topics:'H01–H04, L01–L03, R01–R02',qs:[
+  {t:'scenario',q:'A BFSI CISO says: "We had an outage that cost us ₹40Cr. The board wants a resilience framework — what does that look like?" Walk through your enterprise resilience definition, the tier model, and how you map it to their 5 core business functions.'},
+  {t:'scenario',q:'In a discovery call the customer says: "We have Splunk but do not know what we are detecting or missing." Using NIST CSF, describe exactly how you run a live gap assessment in that meeting — what you score, how, and what the output looks like.'},
+  {t:'recall',q:'Name all 6 functions of NIST CSF 2.0. For each, give one specific control in a mid-size BFSI enterprise and one Splunk capability that supports it.'},
+  {t:'scenario',q:'You are building a credential abuse detection use-case. A senior architect says: "How do you know your telemetry actually covers this?" Walk through validating telemetry sufficiency for T1078, T1110, and T1003.'},
+  {t:'handson',q:'AUDIT — NIST CSF Gap Assessment: Score this org against NIST CSF 2.0. Org: 500-seat IT firm, hybrid cloud, Splunk deployed but untuned, no formal IR, SOC 2 audit pending. Score each of the 6 functions 1–5 and identify top 2 remediation priorities per function.'},
+  {t:'scenario',q:'You have 10 minutes to present your layered security architecture to a CISO who had a ransomware incident 18 months ago. What is your opening sentence, your 3-layer structure, and how you close with a next step?'},
+  {t:'recall',q:'What is the difference between Tier 1, Tier 2, and Tier 3 resilience response? Give a specific BFSI incident example for each tier — name the business function affected and the recovery objective.'},
+]},
+{w:2,title:'Week 2 — ISO 27001 · Risk · SOC 2 · Log Strategy · Detection KPIs',topics:'H05–H24, L04–L18, R03–R13',qs:[
+  {t:'scenario',q:'A compliance officer at an NBFC says: "Our auditor wants ISO 27001 alignment in 90 days. We have Splunk and basic controls. Where do we start?" Walk through ISO control selection, produce a 5-control priority list with P/D/C classification, and map each to a specific Splunk capability.'},
+  {t:'handson',q:'ISO PRACTICE: For a mock healthcare org — 1000 employees, AWS + on-prem, patient data, SOC 2 audit in 60 days — select 10 ISO 27001:2022 Annex A controls, classify each P/D/C, map each to a Splunk monitoring capability, identify top 3 evidence artefacts per control.'},
+  {t:'scenario',q:'A BFSI CISO asks: "Our CFO is pushing back on the ₹2Cr monitoring spend. What does it buy for SOC 2 compliance?" Explain the SOC 2 evidence matrix, which Trust Service Criteria need monitoring investment, and how Splunk satisfies the evidence requirements.'},
+  {t:'recall',q:'Name the 5 SOC 2 Trust Service Criteria. For each, give the 3 most important Splunk detections or log sources that provide compliance evidence.'},
+  {t:'scenario',q:'Your customer SOC generates 5,000 alerts/day with 3 analysts. Design a specific intervention: suppression rules, prioritisation logic, KPI targets for Month 1 and Month 3, and how you measure success.'},
+  {t:'handson',q:'DELIVERABLE: Draft a monitoring and detection RFP section for a "Managed SOC." Include: monitoring approach, 5 detection use cases with MITRE tags, OEM alignment, SOC 2 + ISO 27001 compliance mapping. Target: 350 words, customer-facing language.'},
+  {t:'scenario',q:'A CISO asks: "How do I present the log strategy and KPI financial model to my CFO?" Design the 3-slide financial narrative — what goes on each slide, what numbers you use, and what the single most important metric is.'},
+]},
+{w:3,title:'Week 3 — Maturity · Architecture · Roadmaps · Threat Scenarios',topics:'H25–H37, L19–L27, R14–R18',qs:[
+  {t:'scenario',q:'A new CISO says: "I have 90 days to present a transformation roadmap to the board. I have no idea where we stand." Walk through: how you run a maturity assessment in Week 1, how you build a 12-month roadmap, and what you put on slide 1 of the board deck.'},
+  {t:'handson',q:'AUDIT — CIS Controls v8 Maturity Assessment: For a 300-person fintech with Splunk, on-prem + Azure, 60% remote — score CIS Controls 1, 6, 8, 10, 12, 13 on a 1–5 scale. Produce: score per control, top 3 gaps, effort vs impact matrix, 90-day remediation priority list.'},
+  {t:'scenario',q:'You are presenting a 12-month roadmap to a board where a previous security initiative failed. The CFO says: "Last time we spent money and nothing changed. Why is this different?" Using your financial model and maturity ladder, deliver a 3-minute response that closes with a specific measurable commitment.'},
+  {t:'scenario',q:'You completed your threat scenario library. The SOC Lead says: "These scenarios look good but we lack the telemetry to detect half of them." Build the telemetry investment case for the CISO — what data do you present, what do you ask for, and how do you sequence the investment?'},
+  {t:'recall',q:'What are the 3 storage tiers in your log retention strategy? For each: retention period, the regulation that drives it, technical implementation, and one scenario where the wrong tier assignment causes an audit failure.'},
+  {t:'handson',q:'DELIVERABLE: Produce a Control Gap Remediation Plan for a BFSI customer — no SIEM, basic firewall, AD with no MFA, no DLP, SOC 2 audit in 90 days. Include: 5 prioritised actions, effort vs impact rating, business risk per gap, and a CISO-to-CFO narrative.'},
+  {t:'scenario',q:'A CISO asks you to recommend: (a) in-house SOC with Splunk, (b) managed SIEM via MSSP, or (c) co-managed model. Walk through your trade-off framework. What 5 questions do you ask first, and what criteria drive the recommendation?'},
+]},
+{w:4,title:'Week 4 — ZT Architecture · Detection Architecture · Breach Simulation',topics:'H38–H44, L26–L40, R19–R21',qs:[
+  {t:'scenario',q:'A CIO says: "Everyone is talking about zero trust but I do not know what it means for us." Walk through the 5 ZT pillars, score their CISA ZT Maturity for Identity and Network pillars, and propose the first 3 investments with business justification.'},
+  {t:'handson',q:'ZT AUDIT: For a mock 800-seat IT-ITeS company — hybrid workforce, O365, Azure AD, no PAM, basic MFA, legacy VPN — run a CISA ZT Maturity assessment for the Identity pillar only. Score each capability, identify 3 gaps, produce a 90-day uplift plan with OEM recommendations.'},
+  {t:'scenario',q:'You completed your End-to-End Detection Architecture and validated against MITRE. A technical evaluator says: "Show me which ATT&CK techniques this still misses." Name 3 specific undetected techniques, explain why, and state what telemetry or tool change closes each gap.'},
+  {t:'recall',q:'Explain the difference between detection architecture Block 1 (logical layers) and Block 2 (OEM placement). Why design logical architecture before placing OEM tools? Give a real example where placing tools first creates a coverage gap.'},
+  {t:'scenario',q:'Your tabletop found lateral movement went undetected for 47 minutes. The CISO asks: "What does 47 minutes cost us?" Quantify the business impact and translate it into a specific investment recommendation.'},
+  {t:'handson',q:'DELIVERABLE: Build a Discovery Call Framework for a Splunk ES deployment at a 1500-seat BFSI firm. Include: 20 discovery questions across environment, pain, compliance, commercial; BoM for Splunk ES; 3 qualifying/disqualifying questions.'},
+  {t:'scenario',q:'A CISO says: "We moved to AWS 18 months ago. We know we have misconfigs but not how many or how bad." Design a 2-week cloud posture assessment: what you measure in Week 1, how you score it, what Week 2 remediation looks like.'},
+]},
+{w:5,title:'Week 5 — DORA · AI Security · Executive Defense · OEM Layer 1',topics:'H45–H51, L38–L46, R22–R24',qs:[
+  {t:'scenario',q:'A Head of Risk says: "We have DORA, RBI CSF, SEBI, and IRDAI all applying simultaneously. How do we manage this?" Design a unified compliance architecture. Which 3 controls satisfy the most regulatory obligations simultaneously?'},
+  {t:'handson',q:'DORA AUDIT: For a mock European bank with Indian operations, map 5 DORA Chapter II ICT risk management requirements to your OEM stack. For each: DORA article, compliance obligation, most common control gap, and specific OEM capability that addresses it.'},
+  {t:'scenario',q:'Deliver your 3-minute rehearsed response to: "We spent ₹3Cr on Splunk and still got breached. Why invest more?" Include: a non-defensive opening, 3 specific gaps you are now addressing, and a measurable outcome commitment.'},
+  {t:'recall',q:'Using OWASP Top 10 for LLMs, identify the top 3 risks for developer-facing LLMs. Propose a detection strategy for each using your OEM stack, and explain how NIST AI RMF frames the governance layer above the detections.'},
+  {t:'scenario',q:'The customer interrupts your SOAR demo: "We only have 2 analysts. How long to build and maintain playbooks?" Give realistic effort numbers, handle the wrong-decision objection, and close with the MTTR improvement number.'},
+  {t:'handson',q:'DELIVERABLE: Script your opening 90 seconds for a PA NGFW demo to a network security lead using Cisco Firepower. Then build the first 3 slides of a Splunk vs Microsoft Sentinel battlecard: architecture comparison, strongest SPL vs KQL differentiator, and your E5 bundling objection response.'},
+  {t:'scenario',q:'A CISO says: "We are evaluating you, Microsoft, and Palo Alto Cortex for our SOC platform. Microsoft is cheapest. Why multi-OEM?" Deliver your 3-minute competitive response structured around coverage, depth, and specialisation.'},
+]},
+{w:6,title:'Week 6 — Executive Storytelling · SOAR Hands-On · IAM · OEM Layer 2',topics:'H52–H54, L43–L51, R25–R26',qs:[
+  {t:'scenario',q:'Rewrite this in under 60 words using Pyramid Principle + SCR: "Cyberthreats are increasingly sophisticated and require a comprehensive detection and response approach. Our integrated platform combines SIEM, SOAR, XDR, and threat intelligence to reduce risk through better visibility and faster response." Explain every change you made.'},
+  {t:'handson',q:'SOAR PRACTICE: Design a complete IOC enrichment playbook for Splunk SOAR. Include: trigger, data extraction, CloudSEK XVigil lookup, decision logic, case creation with analyst assignment, and MTTR for automated vs manual path.'},
+  {t:'scenario',q:'A network security lead says: "App-ID sounds similar to what we already do with application signatures. What is actually different?" Walk through the architectural difference, demonstrate with a specific example, and explain the security implication of getting this wrong.'},
+  {t:'recall',q:'A CIO asks: "What exactly does CATO replace and what does it add?" List the 4 components CATO replaces, the 3 new capabilities CATO adds, and the specific scenario where CATO is clearly better than extending your existing PA deployment.'},
+  {t:'scenario',q:'A CISO says: "Show me something real about my organisation right now — not a demo account." You have XVigil available. Walk through exactly what you demonstrate in 8 minutes: specific screens, what you say at each step, how you respond to "we already knew about that".'},
+  {t:'handson',q:'WORKSHOP FACILITATION: Design the first 45 minutes of a SOC assessment workshop for a BFSI CISO and 3 team members. Include: opening question, discovery exercise, a whiteboard activity with instructions, and how you transition from discovery to your first recommendation. Write as a timed run-of-show.'},
+  {t:'scenario',q:'Your VP of Sales asks: "How would you describe your value to a new enterprise prospect?" Write and deliver your 90-second SA positioning statement. Include: top 3 differentiated capabilities, OEMs you are the go-to expert on, the problem you solve better than anyone in your team.'},
+]},
+{w:7,title:'Week 7 — SIGMA · Full OEM Stack · BluSapphire · IAM Integration',topics:'L49–L53, Full OEM integration',qs:[
+  {t:'scenario',q:'A technical evaluator says: "Your competitor wrote a SIGMA rule live in our last session. Can you?" They give you: detect PowerShell download cradle execution (T1059.001) with base64 encoding. Write the complete SIGMA rule, explain each field, identify the false positive risk, and show the Splunk SPL equivalent.'},
+  {t:'handson',q:'SIGMA PRACTICE: Write complete SIGMA rules for: (1) Pass-the-Hash via NTLM (T1550.002); (2) Suspicious scheduled task creation (T1053.005); (3) Lateral movement via WMI (T1047) — process chain and why it evades signature detection.'},
+  {t:'scenario',q:'A CISO gives you 30 minutes and a whiteboard. "Walk me through how your 5-OEM stack detects and responds to ransomware from first indicator to full containment." Hit every OEM. Quantify MTTD and MTTR at each stage. Use customer language — not product feature names.'},
+  {t:'recall',q:'A SOC Lead says: "We have Splunk. What does BluSapphire add?" Explain: (1) specific telemetry BluSapphire provides that Splunk cannot collect alone, (2) the 3 detection scenarios where BluSapphire XDR outperforms Splunk SIEM, and (3) how the integration data flow works technically.'},
+  {t:'scenario',q:'A customer IAM lead says: "We have Azure AD with basic MFA. Our CISO says we need zero trust identity but users complain about MFA friction. How do we get there?" Design a ZT identity implementation in 3 phases with specific policy changes and the productivity safeguard at each stage.'},
+  {t:'handson',q:'FULL DELIVERABLE: Write a 2-page BFSI SOC modernisation case study. Include: before-state (3 specific pain points), 5-OEM solution architecture, 3 measurable outcomes achieved, and a 1-paragraph CISO quote written 12 months after go-live.'},
+  {t:'scenario',q:'A Head of IT says: "Our analysts write detection rules manually when something bad happens. What is wrong with that?" Explain the detection rule lifecycle, the risk of reactive rule writing, and how a SIGMA + version control approach changes the operating model for a 3-analyst SOC.'},
+]},
+{w:8,title:'Week 8 — Privacy · Data Engineering · Portfolio · Commercial Synthesis',topics:'H53, Full R-leg, Complete synthesis',qs:[
+  {t:'scenario',q:'A DPO with Indian and European customers says: "DPDP Act is now in force. Where does it align with GDPR and where does it conflict — and how does our security stack address both?" Map 4 obligations from each regulation, identify 2 conflicts, and explain which OEM capability satisfies the most obligations simultaneously.'},
+  {t:'handson',q:'TCO/ROI MODEL: Build a 3-year TCO model for Splunk ES + Splunk SOAR at a 2000-seat BFSI replacing QRadar. Include: Year 1–3 CAPEX and OPEX; breach cost avoidance calculation; FTE efficiency gains from SOAR automation; ROI% at Year 2 and Year 3; break-even month.'},
+  {t:'scenario',q:'A data engineer says: "We have a data lake on Azure with all our security logs. Why pay for Splunk ingestion?" Explain the architectural difference covering latency, enrichment, correlation, alerting, and compliance — and give one specific scenario where querying a data lake causes a detection failure.'},
+  {t:'recall',q:'Identify your top 5 most commercially valuable deliverables from this 60-day plan. For each: topic ID, deliverable name, deal stage, buyer persona, time to customise, and one real customer scenario where you will use it.'},
+  {t:'scenario',q:'In a CATO vs Zscaler situation the customer says: "Zscaler is the market leader. CATO is newer and less proven. Why take the risk?" Deliver your CATO defence: 3 architecture differentiators, a Zscaler pricing narrative, and the qualifying question that tells you whether this is a CATO win or a Zscaler win.'},
+  {t:'handson',q:'EXECUTIVE NARRATIVE: Produce a complete executive pitch summary for a ₹4Cr BFSI SOC modernisation. Include: 3-sentence problem statement using SCR, recommended OEM architecture with brief justification per OEM, investment ask with 3-year ROI projection, 3 measurable success outcomes, clear next step. Target: 1 page, zero jargon.'},
+  {t:'scenario',q:'You are 30 minutes into a SOC assessment workshop. Two participants are checking phones, the CISO is giving short answers, conversation has stalled. You have 90 minutes left. What facilitation technique do you use, how do you redirect, and how do you ensure you leave with a signed-off next step?'},
+]},
+{w:9,title:'Week 9 Final Assessment — Complete 60-Day Synthesis',topics:'All 134 topics',qs:[
+  {t:'scenario',q:'FINAL CAPSTONE: You have 45 minutes with a BFSI CISO evaluating your firm for a ₹6Cr security transformation alongside 2 competitors. Design your complete engagement: opening (5 min — SCR), discovery (10 min — 20-question framework), architecture recommendation (15 min — layered architecture + OEM stack), commercial case (10 min — TCO/ROI), next steps (5 min).'},
+  {t:'scenario',q:'Write your complete final SA positioning statement. Include: top 3 differentiated capabilities with one proof point each; the OEMs where you are the go-to expert; the verticals where you have the deepest commercial context; the problem you solve better than any other SA in your team. 200 words maximum.'},
+  {t:'handson',q:'PORTFOLIO REVIEW: Identify your top 10 most commercially valuable outputs from 60 days. For each: topic ID, deliverable name, deal stage, buyer persona, time to customise, rank 1–10 by commercial impact, and explain your number 1 ranking choice.'},
+  {t:'recall',q:'Name one key commercial insight from each of these 10 topic groups and describe a specific customer conversation where you will apply it: (1) NIST CSF Gap Assessment, (2) ISO 27001 Controls, (3) SOC 2 Evidence Matrix, (4) ZT Architecture, (5) Detection Architecture End-to-End, (6) Breach Simulation, (7) Splunk ES + RBA, (8) SOAR Playbooks, (9) CloudSEK XVigil, (10) Full OEM Stack Integration.'},
+  {t:'scenario',q:'Multi-vendor competitive: Your prospect evaluates Microsoft (Sentinel + Defender + Entra + Zscaler), Palo Alto (Cortex + NGFW + Prisma), IBM (QRadar + SOAR), and your multi-OEM stack. Make the case for your approach using TCO (3-year), detection coverage (MITRE ATT&CK), specialisation depth, and flexibility as your 4 pillars.'},
+  {t:'scenario',q:'Phase 2 planning: Identify: (1) the 2 certifications you will pursue and why; (2) the thought leadership piece you will publish and its unique angle; (3) the first customer-facing activity you will lead; and (4) the single biggest commercial opportunity this upskill creates for you in the next quarter.'},
+  {t:'handson',q:'SAIL RETROSPECTIVE: Stop — what specific habit or topic investment did not produce commercial value? Add — what should you have done more of? Improve — what worked but needs to be better? Leave — what did you over-invest in relative to commercial return? For each SAIL item give a specific action you will take in Phase 2.'},
+]}
+];
+
+// ═══════════════════════════════════════════════════
+// STATE HELPERS — wire every mutation through schedSave()
+// ═══════════════════════════════════════════════════
+function topicDone(id){ return !!S.done[id]; }
+function topicStatus(id){ return S.status[id]||'Not Started'; }
+function doneCount(){ return TOPICS.filter(t=>topicDone(t.id)).length; }
+function legDone(leg){ return TOPICS.filter(t=>t.leg===leg&&topicDone(t.id)).length; }
+function legTotal(leg){ return TOPICS.filter(t=>t.leg===leg).length; }
+
+function markDone(id,val){
+  const was=topicDone(id);
+  S.done[id]=val;
+  if(val&&!was){ S.xp+=50; S.status[id]='Done'; }
+  else if(!val&&was){ S.xp=Math.max(0,S.xp-50); if(S.status[id]==='Done') S.status[id]='Not Started'; }
+  updateStreak();
+  schedSave(); // ← triggers debounced cloud save
+  refreshNav();
+  if(currentTab==='plan') renderPlan();
+  if(currentTab==='kanban') renderKanban();
+  if(currentTab==='dash') renderDash();
+  renderMap();
+}
+
+function changeStatus(id,val){
+  S.status[id]=val;
+  if(val==='Done'&&!topicDone(id)) markDone(id,true);
+  else if(val!=='Done'&&topicDone(id)) markDone(id,false);
+  else{ schedSave(); refreshNav(); }
+}
+
+function updateStreak(){
+  const today=new Date().toDateString();
+  if(S.lastActive!==today){
+    const yest=new Date(Date.now()-86400000).toDateString();
+    S.streak=S.lastActive===yest?S.streak+1:1;
+    S.lastActive=today;
+  }
+}
+
+function saveAnswer(week,qi,answer){
+  S.assessAnswers[week+'-'+qi]=answer;
+  schedSave();
+}
+function saveScore(week,score){
+  S.assessScores[week]=score;
+  schedSave();
+}
+
+const XP_LEVELS=[
+  {name:'Rookie',min:0,max:499},{name:'Associate SA',min:500,max:1499},
+  {name:'Sr. SA',min:1500,max:2999},{name:'Principal',min:3000,max:4999},
+  {name:'Trusted Advisor',min:5000,max:99999}
+];
+function getLevel(xp){ return XP_LEVELS.find(l=>xp>=l.min&&xp<=l.max)||XP_LEVELS[0]; }
+
+function refreshNav(){
+  document.getElementById('xp-el').textContent=S.xp+' XP';
+  document.getElementById('streak-el').textContent='🔥 '+S.streak;
+  document.getElementById('lvl-el').textContent=getLevel(S.xp).name;
+  document.getElementById('map-done-count').textContent=doneCount();
+  document.getElementById('map-xp-count').textContent=S.xp;
+}
+
+function lc(leg){ return{H:'var(--H)',L:'var(--L)',R:'var(--R)'}[leg]||'#fff'; }
+function lbg(leg){ return{H:'var(--Hbg)',L:'var(--Lbg)',R:'var(--Rbg)'}[leg]||'#0d1424'; }
+function pbar(pct,color,h=6){ return`<div class="pbar" style="height:${h}px"><div class="pbar-fill" style="width:${Math.min(100,Math.round(pct))}%;background:${color};height:${h}px"></div></div>`; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function scCls(s){ return{Done:'sDone','In Progress':'sIP','Needs Revisit':'sNR'}[s]||'sNS'; }
+
+// ═══════════════════════════════════
+// MIND MAP
+// ═══════════════════════════════════
+let mt={x:0,y:0,s:1},mDrag=false,mLast={x:0,y:0},mapFilter='all';
+
+function renderMap(){
+  const wrap=document.getElementById('map-svg-wrap');
+  const svg=document.getElementById('map-svg');
+  const W=wrap.clientWidth||window.innerWidth;
+  const H=wrap.clientHeight||(window.innerHeight-48);
+  const cx=W/2,cy=H/2;
+  const hT=TOPICS.filter(t=>t.leg==='H');
+  const lT=TOPICS.filter(t=>t.leg==='L');
+  const rT=TOPICS.filter(t=>t.leg==='R');
+  function vis(t){ if(mapFilter==='all')return true; if(mapFilter==='done')return topicDone(t.id); return t.leg===mapFilter; }
+  const legs=[
+    {topics:hT,angle:-90,spread:115,color:'#b57bee'},
+    {topics:lT,angle:150,spread:110,color:'#00e5c3'},
+    {topics:rT,angle:30,spread:90,color:'#ff8c42'},
+  ];
+  const CX=55,R_INNER=210,R_OUTER=340,NR=16;
+  let lines='',nodes='',labels='';
+  legs.forEach(leg=>{
+    const vt=leg.topics.filter(vis); if(!vt.length)return;
+    const aRad=leg.angle*(Math.PI/180),sRad=leg.spread*(Math.PI/180);
+    const half=Math.ceil(vt.length/2),inner=vt.slice(0,half),outer=vt.slice(half);
+    const axEnd=R_INNER*0.6;
+    lines+=`<line x1="${cx}" y1="${cy}" x2="${cx+Math.cos(aRad)*axEnd}" y2="${cy+Math.sin(aRad)*axEnd}" stroke="${leg.color}" stroke-width="1.2" opacity="0.35"/>`;
+    inner.forEach((t,i)=>{
+      const off=inner.length>1?(i/(inner.length-1)-0.5):0;
+      const ang=aRad+off*sRad*0.7;
+      const nx=cx+Math.cos(ang)*R_INNER,ny=cy+Math.sin(ang)*R_INNER;
+      const done=topicDone(t.id),fc=done?'#06d6a0':leg.color,bg=done?'rgba(6,214,160,.12)':lbg(t.leg);
+      lines+=`<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${leg.color}" stroke-width="0.5" opacity="0.15"/>`;
+      nodes+=nodeEl(t,nx,ny,NR,fc,bg,done);
+    });
+    outer.forEach((t,i)=>{
+      const off=outer.length>1?(i/(outer.length-1)-0.5):0;
+      const ang=aRad+off*sRad;
+      const nx=cx+Math.cos(ang)*R_OUTER,ny=cy+Math.sin(ang)*R_OUTER;
+      const done=topicDone(t.id),fc=done?'#06d6a0':leg.color,bg=done?'rgba(6,214,160,.12)':lbg(t.leg);
+      lines+=`<line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${leg.color}" stroke-width="0.4" opacity="0.1"/>`;
+      nodes+=nodeEl(t,nx,ny,NR,fc,bg,done);
+    });
+    const lx=cx+Math.cos(aRad)*(R_OUTER+36),ly=cy+Math.sin(aRad)*(R_OUTER+36);
+    labels+=`<text x="${lx}" y="${ly}" text-anchor="middle" font-family="Syne,sans-serif" font-size="10" font-weight="800" fill="${leg.color}" opacity="0.8">${leg.color==='#b57bee'?'HORIZONTAL (54)':leg.color==='#00e5c3'?'LEFT LEG (53)':'RIGHT LEG (32)'}</text>`;
+  });
+  function nodeEl(t,nx,ny,r,fc,bg,done){
+    const sn=t.name.length>18?t.name.substring(0,16)+'…':t.name;
+    return`<g onclick="openTopic('${t.id}')" style="cursor:pointer">
+      <circle cx="${nx}" cy="${ny}" r="${r}" fill="${bg}" stroke="${fc}" stroke-width="${done?2:1}" opacity="${done?1:.82}"/>
+      ${done?`<circle cx="${nx}" cy="${ny}" r="${r+4}" fill="none" stroke="${fc}" stroke-width="0.6" opacity="0.22" stroke-dasharray="2,3"/>`:``}
+      <text x="${nx}" y="${ny-4}" text-anchor="middle" font-family="Inconsolata,monospace" font-size="7.5" font-weight="700" fill="${fc}">${t.id}</text>
+      <text x="${nx}" y="${ny+5}" text-anchor="middle" font-family="Syne,sans-serif" font-size="6" fill="#8892b0">${esc(sn.split(' ').slice(0,2).join(' '))}</text>
+      <text x="${nx}" y="${ny+13}" text-anchor="middle" font-family="Inconsolata,monospace" font-size="7" fill="${done?'#06d6a0':'#4a5568'}">${done?'✓':topicStatus(t.id).substring(0,2)}</text>
+    </g>`;
+  }
+  const tot=Math.round((doneCount()/139)*100);
+  const center=`
+    <circle cx="${cx}" cy="${cy}" r="${CX}" fill="#090d1f" stroke="#b57bee" stroke-width="1.5"/>
+    <circle cx="${cx}" cy="${cy}" r="${CX+10}" fill="none" stroke="#00e5c3" stroke-width="0.6" opacity="0.3"/>
+    <text x="${cx}" y="${cy-14}" text-anchor="middle" font-family="Syne,sans-serif" font-size="26" font-weight="800" fill="#b57bee">π</text>
+    <text x="${cx}" y="${cy+4}" text-anchor="middle" font-family="Inconsolata,monospace" font-size="9.5" fill="#dce7f8" font-weight="700">SA Upskill</text>
+    <text x="${cx}" y="${cy+17}" text-anchor="middle" font-family="Inconsolata,monospace" font-size="9" fill="#00e5c3">${tot}%</text>
+    <text x="${cx}" y="${cy+29}" text-anchor="middle" font-family="Inconsolata,monospace" font-size="7.5" fill="#4a5568">${doneCount()}/139</text>`;
+  svg.innerHTML=`<defs><radialGradient id="bgG" cx="50%" cy="50%"><stop offset="0%" stop-color="#0a1020"/><stop offset="100%" stop-color="#050810"/></radialGradient></defs>
+  <rect width="100%" height="100%" fill="url(#bgG)"/>
+  <g id="map-g" transform="translate(${mt.x},${mt.y}) scale(${mt.s})">${lines}${center}${nodes}${labels}</g>`;
+  const w=document.getElementById('map-svg-wrap');
+  w.onmousedown=e=>{mDrag=true;mLast={x:e.clientX,y:e.clientY};e.preventDefault();};
+  w.onmousemove=e=>{if(!mDrag)return;mt.x+=e.clientX-mLast.x;mt.y+=e.clientY-mLast.y;mLast={x:e.clientX,y:e.clientY};applyMT();};
+  w.onmouseup=()=>mDrag=false;
+  w.onmouseleave=()=>mDrag=false;
+  w.onwheel=e=>{e.preventDefault();mt.s=Math.max(.2,Math.min(4,mt.s*(e.deltaY>0?.88:1.12)));applyMT();};
+  w.ontouchstart=e=>{mDrag=true;mLast={x:e.touches[0].clientX,y:e.touches[0].clientY};};
+  w.ontouchmove=e=>{if(!mDrag)return;mt.x+=e.touches[0].clientX-mLast.x;mt.y+=e.touches[0].clientY-mLast.y;mLast={x:e.touches[0].clientX,y:e.touches[0].clientY};applyMT();e.preventDefault();};
+  w.ontouchend=()=>mDrag=false;
+}
+function applyMT(){ const g=document.getElementById('map-g');if(g)g.setAttribute('transform',`translate(${mt.x},${mt.y}) scale(${mt.s})`); }
+function mapZoom(f){ mt.s=Math.max(.3,Math.min(3,mt.s*f));applyMT(); }
+function mapReset(){ mt={x:0,y:0,s:1};applyMT(); }
+function setMapFilter(f){
+  mapFilter=f;
+  document.querySelectorAll('.mf-btn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('mf-'+f)?.classList.add('on');
+  renderMap();
+}
+
+// ═══════════════════════════════════
+// 60-DAY PLAN
+// ═══════════════════════════════════
+function renderPlan(){
+  const el=document.getElementById('plan-content'); if(!el)return;
+  const done=doneCount(),hd=legDone('H'),ld=legDone('L'),rd=legDone('R');
+  el.innerHTML=`<div class="plan-intro">
+    <div><div class="plan-intro-val">${done}</div><div class="plan-intro-label">/ 139 topics done</div></div>
+    <div><div class="plan-intro-val" style="color:var(--H)">${hd}</div><div class="plan-intro-label">/ 54 Horizontal</div></div>
+    <div><div class="plan-intro-val" style="color:var(--L)">${ld}</div><div class="plan-intro-label">/ 53 Left Leg</div></div>
+    <div><div class="plan-intro-val" style="color:var(--R)">${rd}</div><div class="plan-intro-label">/ 32 Right Leg</div></div>
+    <div><div class="plan-intro-val" style="color:var(--xp)">${Math.round((done/139)*100)}%</div><div class="plan-intro-label">overall progress</div></div>
+    <div style="flex:1">${pbar((done/139)*100,'var(--prog)',8)}</div>
+  </div>
+  ${SCHEDULE.map(week=>`<div class="week-block">
+    <div class="week-hdr">
+      <span class="week-num">Week ${week.w}</span>
+      <span class="week-dates">${week.dates}</span>
+      ${week.milestone?`<span class="week-milestone">${week.milestone}</span>`:''}
+      <span class="week-prog" style="color:var(--t2)">
+        ${week.days.filter(d=>d.topics).reduce((a,d)=>a+d.topics.filter(id=>topicDone(id)).length,0)} /
+        ${week.days.filter(d=>d.topics).reduce((a,d)=>a+d.topics.length,0)} done
+      </span>
+    </div>
+    ${week.days.map(day=>`<div class="day-row">
+      <div class="day-hdr">
+        <span class="day-num">Day ${day.d}</span>
+        <span class="day-date">${day.date}</span>
+        <span class="day-dow">${day.dow}</span>
+        ${day.topics?`<span style="margin-left:auto;font-size:9px;color:var(--t3);font-family:var(--mono)">${day.topics.length} topics · 3h</span>`:''}
+      </div>
+      ${day.topics?`<div class="day-topics">
+        ${day.topics.map(id=>{
+          const t=TOPICS.find(x=>x.id===id);if(!t)return'';
+          const done=topicDone(id);
+          return`<div class="dtc leg-${t.leg} ${done?'done-c':''}" onclick="openTopic('${id}')">
+            <div class="dtc-cb ${done?'on':''}">${done?'✓':''}</div>
+            ${esc(t.id)} — ${esc(t.name)}
+          </div>`;
+        }).join('')}
+      </div>`:`<div class="day-special">${esc(day.special||'')}</div>`}
+    </div>`).join('')}
+  </div>`).join('')}`;
+}
+
+// ═══════════════════════════════════
+// KANBAN
+// ═══════════════════════════════════
+function renderKanban(){
+  const el=document.getElementById('kanban-content'); if(!el)return;
+  el.innerHTML='';
+  SCHEDULE.forEach(week=>{
+    const col=document.createElement('div');
+    col.className='kb-col';
+    const allIds=week.days.filter(d=>d.topics).flatMap(d=>d.topics);
+    const wDone=allIds.filter(id=>topicDone(id)).length;
+    col.innerHTML=`<div class="kb-col-hdr">
+      <span class="kb-col-title" style="color:var(--xp)">Week ${week.w} · ${week.dates}</span>
+      <span class="kb-col-prog" style="color:${wDone===allIds.length&&allIds.length>0?'var(--done)':'var(--t2)'}">${wDone}/${allIds.length}</span>
+    </div>
+    <div class="kb-cards">
+      ${week.milestone?`<div class="kb-milestone">${week.milestone}</div>`:''}
+      ${week.days.map(day=>{
+        if(!day.topics&&day.special)return`<div class="kb-special">${esc(day.special)}</div>`;
+        if(!day.topics)return'';
+        return day.topics.map(id=>{
+          const t=TOPICS.find(x=>x.id===id);if(!t)return'';
+          const done=topicDone(id),st=topicStatus(id);
+          return`<div class="kb-card leg-${t.leg} ${done?'done':''}" onclick="openTopic('${id}')">
+            <div class="kb-card-top"><span class="kb-card-id" style="color:${lc(t.leg)}">${t.id}</span><span class="kb-card-day">D${day.d}</span></div>
+            <div class="kb-card-name">${esc(t.name)}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">
+              <span class="kb-card-status ${scCls(st)}">${st}</span>
+              <span style="font-size:8px;color:var(--xp);font-family:var(--mono)">+50 XP</span>
+            </div>
+          </div>`;
+        }).join('');
+      }).join('')}
+    </div>`;
+    el.appendChild(col);
+  });
+}
+
+// ═══════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════
+function renderDash(){
+  const el=document.getElementById('dash-content');if(!el)return;
+  const done=doneCount(),lv=getLevel(S.xp);
+  const xpPct=lv.max<99999?Math.round(((S.xp-lv.min)/(lv.max-lv.min))*100):100;
+  const hd=legDone('H'),ld=legDone('L'),rd=legDone('R');
+  const milestones=[
+    {label:'15-Day',date:'Apr 17',color:'#3b82f6',ids:SCHEDULE.filter(w=>w.w<=3).flatMap(w=>w.days.filter(d=>d.topics).flatMap(d=>d.topics))},
+    {label:'25-Day',date:'May 1', color:'#10b981',ids:SCHEDULE.filter(w=>w.w<=5).flatMap(w=>w.days.filter(d=>d.topics).flatMap(d=>d.topics))},
+    {label:'35-Day',date:'May 15',color:'#8b5cf6',ids:SCHEDULE.filter(w=>w.w<=7).flatMap(w=>w.days.filter(d=>d.topics).flatMap(d=>d.topics))},
+    {label:'45-Day',date:'May 29',color:'#f59e0b',ids:SCHEDULE.filter(w=>w.w<=9).flatMap(w=>w.days.filter(d=>d.topics).flatMap(d=>d.topics))},
+    {label:'D-Day', date:'Jun 23',color:'#ef4444',ids:TOPICS.map(t=>t.id)},
+  ];
+  const streakSqs=Array.from({length:45},(_,i)=>`<div class="streak-sq ${i<S.streak?'on':''}"></div>`).join('');
+  const badgesHtml=TOPICS.map(t=>`<div class="badge ${topicDone(t.id)?'earned':''}" title="${t.name}" onclick="openTopic('${t.id}')"><span class="badge-icon">${t.badge}</span><span class="badge-id">${t.id}</span></div>`).join('');
+  el.innerHTML=`
+  <div class="dash-hero">
+    <div class="d-stat" style="border-top:3px solid var(--prog)">
+      <div class="d-stat-label">Total Progress</div>
+      <div class="d-stat-val" style="color:var(--prog)">${Math.round((done/139)*100)}%</div>
+      ${pbar((done/139)*100,'var(--prog)',7)}
+      <div class="d-stat-sub">${done}/139 topics complete</div>
+    </div>
+    <div class="d-stat" style="border-top:3px solid var(--xp)">
+      <div class="d-stat-label">Total XP</div>
+      <div class="d-stat-val" style="color:var(--xp)">${S.xp}</div>
+      <div class="d-stat-sub">${done} topics × 50 XP</div>
+    </div>
+    <div class="d-stat" style="border-top:3px solid #f97316">
+      <div class="d-stat-label">Day Streak</div>
+      <div class="d-stat-val" style="color:#f97316">${S.streak}</div>
+      <div class="streak-grid">${streakSqs}</div>
+    </div>
+    <div class="level-card">
+      <div class="d-stat-label">Current Level</div>
+      <div class="lv-name">${lv.name}</div>
+      ${pbar(xpPct,'var(--xp)',7)}
+      <div class="d-leg-sub">${S.xp}/${lv.max<99999?lv.max:'∞'} XP · ${xpPct}% to next</div>
+      <div class="lv-grid">${XP_LEVELS.map(l=>`<div class="lv-row ${l.name===lv.name?'cur':''}">${l.name}</div>`).join('')}</div>
+    </div>
+  </div>
+  <div class="milestones-grid">
+    ${milestones.map(m=>{const md=m.ids.filter(id=>topicDone(id)).length,mt2=m.ids.length,pct2=mt2?(md/mt2)*100:0;return`<div class="m-card ${pct2>=100?'hit':''}" style="border-top-color:${m.color}"><div class="m-label" style="color:${m.color}">${m.label}</div><div class="m-date">${m.date}</div>${pbar(pct2,m.color,5)}<div class="m-pct" style="color:${m.color}">${Math.round(pct2)}%</div><div class="m-sub">${md}/${mt2} topics</div></div>`;}).join('')}
+  </div>
+  <div class="dash-mid">
+    <div class="d-leg" style="border-top:3px solid var(--H)"><div class="d-leg-title" style="color:var(--H)">Horizontal</div><div class="d-leg-pct" style="color:var(--H)">${Math.round((hd/54)*100)}%</div>${pbar((hd/54)*100,'var(--H)',6)}<div class="d-leg-sub">${hd}/54 topics</div></div>
+    <div class="d-leg" style="border-top:3px solid var(--L)"><div class="d-leg-title" style="color:var(--L)">Left Leg</div><div class="d-leg-pct" style="color:var(--L)">${Math.round((ld/53)*100)}%</div>${pbar((ld/53)*100,'var(--L)',6)}<div class="d-leg-sub">${ld}/53 topics</div></div>
+    <div class="d-leg" style="border-top:3px solid var(--R)"><div class="d-leg-title" style="color:var(--R)">Right Leg</div><div class="d-leg-pct" style="color:var(--R)">${Math.round((rd/32)*100)}%</div>${pbar((rd/32)*100,'var(--R)',6)}<div class="d-leg-sub">${rd}/32 topics</div></div>
+    <div class="d-leg" style="border-top:3px solid var(--xp)"><div class="d-leg-title" style="color:var(--xp)">Assessments</div><div class="d-leg-pct" style="color:var(--xp)">${Object.keys(S.assessScores).length}</div>${pbar((Object.keys(S.assessScores).length/9)*100,'var(--xp)',6)}<div class="d-leg-sub">${Object.keys(S.assessScores).length}/9 completed</div></div>
+  </div>
+  <div class="badges-section">
+    <div class="badges-title">🏅 Badge Collection — ${done}/139 Earned</div>
+    <div class="badges-grid">${badgesHtml}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════
+// ASSESSMENTS
+// ═══════════════════════════════════
+let curAssessW=1,assessTimer=null,assessTL=600,assessRunning=false;
+function renderAssessNav(){
+  const el=document.getElementById('assess-nav');if(!el)return;
+  el.innerHTML=ASSESSMENTS.map(a=>`<button class="aw-btn ${curAssessW===a.w?'on':''} ${S.assessScores[a.w]!==undefined?'done':''}" onclick="showAssess(${a.w})">W${a.w}${S.assessScores[a.w]!==undefined?' ✅':''}</button>`).join('');
+}
+function showAssess(w){ curAssessW=w;renderAssessNav();renderAssessBody(); }
+function renderAssessBody(){
+  const el=document.getElementById('assess-content');if(!el)return;
+  const a=ASSESSMENTS.find(x=>x.w===curAssessW);if(!a)return;
+  if(S.assessScores[a.w]!==undefined){renderAssessComplete(a);return;}
+  if(!assessRunning){
+    el.innerHTML=`<div class="quiz-box"><div class="quiz-start">
+      <div style="font-size:32px;margin-bottom:10px">📝</div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:6px">${esc(a.title)}</div>
+      <div style="font-size:10px;color:var(--t2);font-family:var(--mono);margin-bottom:4px">Topics: ${esc(a.topics)}</div>
+      <div style="font-size:10px;color:var(--t2);margin-bottom:18px;line-height:1.7">7 questions · 10-minute timer · Mix of scenario, recall, and hands-on</div>
+      <button class="q-start-btn" onclick="startAssess(${a.w})">▶ Start Assessment</button>
+    </div></div>`;
+    return;
+  }
+  const m=Math.floor(assessTL/60).toString().padStart(2,'0'),s=(assessTL%60).toString().padStart(2,'0');
+  el.innerHTML=`<div class="quiz-box">
+    <div class="quiz-hdr">
+      <div><div class="quiz-title">${esc(a.title)}</div><div class="quiz-meta">Topics: ${esc(a.topics)} · 7 questions</div></div>
+      <div class="quiz-timer ${assessTL<120?'urgent':''}" id="quiz-timer">${m}:${s}</div>
+    </div>
+    <div class="quiz-body">
+      ${a.qs.map((q,i)=>`<div class="q-item">
+        <div class="q-top"><span class="q-num">Q${i+1}/7</span><span class="q-type ${q.t}">${q.t==='scenario'?'🎯 SCENARIO':q.t==='handson'?'🔧 HANDS-ON':'📚 RECALL'}</span></div>
+        <div class="q-text">${esc(q.q)}</div>
+        <textarea class="q-ans" id="qa-${a.w}-${i}" rows="4" placeholder="Write your answer here...">${esc(S.assessAnswers[a.w+'-'+i]||'')}</textarea>
+      </div>`).join('')}
+    </div>
+    <div class="quiz-footer">
+      <div style="font-size:9px;color:var(--t3);font-family:var(--mono)">Auto-saves to cloud · Submit when complete</div>
+      <button class="q-submit" onclick="submitAssess(${a.w})">Submit →</button>
+    </div>
+  </div>`;
+  a.qs.forEach((_,i)=>{ const ta=document.getElementById('qa-'+a.w+'-'+i);if(ta)ta.oninput=()=>saveAnswer(a.w,i,ta.value); });
+  startAssessTimer(a.w);
+}
+function startAssess(w){ assessRunning=true;assessTL=600;renderAssessBody(); }
+function startAssessTimer(w){
+  if(assessTimer)clearInterval(assessTimer);
+  assessTimer=setInterval(()=>{
+    assessTL--;
+    const el=document.getElementById('quiz-timer');
+    if(el){const m=Math.floor(assessTL/60).toString().padStart(2,'0'),s=(assessTL%60).toString().padStart(2,'0');el.textContent=m+':'+s;if(assessTL<120)el.classList.add('urgent');}
+    if(assessTL<=0){clearInterval(assessTimer);submitAssess(w);}
+  },1000);
+}
+function submitAssess(w){
+  if(assessTimer)clearInterval(assessTimer);
+  assessRunning=false;
+  const a=ASSESSMENTS.find(x=>x.w===w);
+  const filled=a.qs.filter((_,i)=>(S.assessAnswers[w+'-'+i]||'').trim().length>40).length;
+  const score=Math.round((filled/7)*100);
+  S.xp+=score;
+  saveScore(w,score);
+  refreshNav();
+  renderAssessNav();
+  renderAssessComplete(a);
+}
+function renderAssessComplete(a){
+  const el=document.getElementById('assess-content');if(!el)return;
+  const score=S.assessScores[a.w];
+  el.innerHTML=`<div class="quiz-box">
+    <div class="quiz-hdr">
+      <div><div class="quiz-title">${esc(a.title)}</div><div style="font-size:10px;color:var(--done);font-family:var(--mono)">✅ Submitted · +${score} XP earned</div></div>
+      <div class="score-display" style="color:${score>=70?'var(--done)':score>=40?'var(--xp)':'var(--red)'}">${score}%</div>
+    </div>
+    <div class="quiz-body">
+      <div class="quiz-reflection">
+        <div class="refl-title">📋 CLAUDE EVALUATION PROMPT — Copy and paste this with your answers</div>
+        <div class="refl-prompt">"I have completed my Week ${a.w} assessment on ${esc(a.topics)}. Here are my answers to all 7 questions. Please: (1) Score each answer out of 10 with specific feedback, (2) Identify the top 3 gaps in my thinking, (3) Give me 3 things to improve before next week, (4) Rate my overall synthesis quality as Rookie / Developing / Proficient / Expert and explain why."</div>
+      </div>
+      <div style="margin-top:14px;font-size:10px;font-weight:700;color:var(--t2);font-family:var(--mono);margin-bottom:8px">YOUR SUBMITTED ANSWERS:</div>
+      ${a.qs.map((q,i)=>`<div style="margin-bottom:12px;padding:10px;background:var(--s2);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:9px;color:var(--t2);font-family:var(--mono);margin-bottom:4px">Q${i+1} · ${q.t==='scenario'?'🎯 SCENARIO':q.t==='handson'?'🔧 HANDS-ON':'📚 RECALL'}</div>
+        <div style="font-size:11px;font-weight:600;margin-bottom:7px">${esc(q.q)}</div>
+        <div style="font-size:10px;color:var(--done);background:var(--s3);padding:8px;border-radius:6px;line-height:1.6;white-space:pre-wrap">${esc(S.assessAnswers[a.w+'-'+i]||'[No answer]')}</div>
+      </div>`).join('')}
+    </div>
+    <div class="quiz-footer">
+      <button onclick="retakeAssess(${a.w})" style="padding:6px 14px;border-radius:6px;background:var(--s3);border:1px solid var(--border);color:var(--t2);font-size:10px">↺ Retake</button>
+      <div style="font-size:9px;color:var(--t3);font-family:var(--mono)">Score saved · XP credited · Synced to cloud</div>
+    </div>
+  </div>`;
+}
+function retakeAssess(w){ delete S.assessScores[w]; schedSave(); assessRunning=false; assessTL=600; renderAssessNav(); renderAssessBody(); }
+
+// ═══════════════════════════════════
+// TOPIC MODAL
+// ═══════════════════════════════════
+let curTopicId=null;
+function openTopic(id){
+  curTopicId=id;
+  const t=TOPICS.find(x=>x.id===id);if(!t)return;
+  const done=topicDone(id),st=topicStatus(id),note=S.notes[id]||'',url=S.url[id]||'';
+  const handsonLabel={audit:'🔍 Audit / Gap Assessment',lab:'🔧 Lab / Configuration',deliverable:'📄 Deliverable Build'}[t.handson]||t.handson;
+  const tagClass={H:'tagH',L:'tagL',R:'tagR'}[t.leg]||'';
+  const legLabel={H:'HORIZONTAL',L:'LEFT LEG',R:'RIGHT LEG'}[t.leg]||t.leg;
+  const weekData=SCHEDULE.find(w=>w.days.some(d=>d.topics&&d.topics.includes(id)));
+  const dayData=weekData?.days.find(d=>d.topics&&d.topics.includes(id));
+  const connected=(dayData?.topics||[]).filter(x=>x!==id);
+  document.getElementById('modal-body').innerHTML=`
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <span class="tag ${tagClass}">${legLabel}</span>
+        <span style="font-family:var(--mono);font-size:9px;color:var(--t2)">${t.id}</span>
+        ${weekData?`<span style="font-family:var(--mono);font-size:9px;color:var(--t3)">Week ${weekData.w} · Day ${dayData?.d||'?'}</span>`:''}
+        <span style="font-size:20px;margin-left:auto">${t.badge}</span>
+      </div>
+      <div class="topic-name">${esc(t.name)}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <select class="status-sel" id="st-sel" onchange="changeStatus('${id}',this.value)">
+        ${['Not Started','In Progress','Done','Needs Revisit'].map(s=>`<option value="${s}" ${st===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;font-weight:700">
+        <input type="checkbox" ${done?'checked':''} onchange="markDone('${id}',this.checked);document.getElementById('st-sel').value=topicStatus('${id}')" style="cursor:pointer;width:15px;height:15px;accent-color:var(--done)">
+        <span style="color:${done?'var(--done)':'var(--t2)'}">Mark Complete (+50 XP)</span>
+      </label>
+      ${done?`<span class="tag" style="background:rgba(6,214,160,.1);color:var(--done);border:1px solid rgba(6,214,160,.3)">✅ Done · +50 XP</span>`:''}
+    </div>
+    <div class="ts">
+      <div class="ts-label">Key Insight — Commercial Value</div>
+      <div class="ts-insight">💡 ${esc(t.insight)}</div>
+    </div>
+    <div class="ts">
+      <div class="ts-label">Hands-On Activity</div>
+      <span class="handson-tag h-${t.handson}">${handsonLabel}</span>
+      <div class="ts-box">${esc(t.activity)}</div>
+    </div>
+    <div class="ts">
+      <div class="ts-label">Your Notes</div>
+      <textarea class="notes-area" id="notes-${id}" placeholder="Write anything — key learnings, customer scenarios, connections to other topics...">${esc(note)}</textarea>
+    </div>
+    <div class="ts">
+      <div class="ts-label">Apple Notes / Resource URL</div>
+      <div class="url-row">
+        <input class="url-inp" id="url-${id}" type="url" placeholder="Paste your Apple Notes or resource link..." value="${esc(url)}">
+        ${url?`<a class="url-open-btn" href="${esc(url)}" target="_blank" rel="noopener">📝 Open ↗</a>`:''}
+      </div>
+    </div>
+    ${connected.length?`<div class="ts"><div class="ts-label">Studied Same Day</div><div class="conn-row">${connected.map(cid=>{const ct=TOPICS.find(x=>x.id===cid);return ct?`<span class="conn-chip" onclick="saveModalAndOpen('${cid}')">${ct.id} — ${ct.name.substring(0,25)}</span>`:''}).join('')}</div></div>`:''}
+    <button class="modal-save" onclick="saveModal('${id}')">💾 Save Notes</button>`;
+  document.getElementById('topic-overlay').classList.add('on');
+}
+function saveModal(id){
+  const notes=document.getElementById('notes-'+id);
+  const url=document.getElementById('url-'+id);
+  if(notes) S.notes[id]=notes.value;
+  if(url) S.url[id]=url.value.trim();
+  schedSave();
+  const btn=document.querySelector('.modal-save');
+  if(btn){btn.textContent='✅ Saved!';setTimeout(()=>{btn.textContent='💾 Save Notes';},1500);}
+  if(currentTab==='plan') renderPlan();
+  if(currentTab==='kanban') renderKanban();
+  if(currentTab==='dash') renderDash();
+  renderMap(); refreshNav();
+}
+function saveModalAndOpen(newId){ if(curTopicId)saveModal(curTopicId); closeModal(); setTimeout(()=>openTopic(newId),100); }
+function closeModal(){
+  if(curTopicId){
+    const notes=document.getElementById('notes-'+curTopicId);
+    const url=document.getElementById('url-'+curTopicId);
+    if(notes) S.notes[curTopicId]=notes.value;
+    if(url) S.url[curTopicId]=url.value.trim();
+    schedSave();
+  }
+  document.getElementById('topic-overlay').classList.remove('on');
+  curTopicId=null;
+  if(currentTab==='plan') renderPlan();
+  if(currentTab==='kanban') renderKanban();
+  if(currentTab==='dash') renderDash();
+  renderMap(); refreshNav();
+}
+document.getElementById('topic-overlay').onclick=e=>{if(e.target===document.getElementById('topic-overlay'))closeModal();};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+
+// ═══════════════════════════════════
+// PHASE 2
+// ═══════════════════════════════════
+function renderP2(){
+  const el=document.getElementById('p2-content');if(!el)return;
+  el.innerHTML=`<div class="p2-banner">
+    <div class="p2-banner-title">🚀 Phase 2 — Beyond Jun 23, 2026</div>
+    <div class="p2-banner-sub">Certifications · Thought Leadership · Customer-Facing Activities · OEM LP Completion</div>
+    <div style="font-size:10px;color:rgba(20,184,166,.5);font-family:var(--mono);margin-top:6px">[ Activate after D-Day — Jun 23, 2026 ]</div>
+  </div>
+  <div class="p2-grid">
+    ${[
+      {icon:'🎓',title:'Certifications Track',items:['Splunk Core Certified User','Splunk Enterprise Security Admin','PA PCNSA — Network Security Associate','CATO Certified Associate → Professional','CloudSEK Partner Certification','BluSapphire Partner Certification'],note:'Target: 2 certs by Aug 2026 · 4 certs by Dec 2026'},
+      {icon:'✍️',title:'Thought Leadership',items:['White Paper — Draft 1 complete','White Paper — Published (LinkedIn/Blog)','LinkedIn Article Series (4 articles)','Cyberneurix content calendar (30 days)','Industry conference abstract submission','Internal knowledge session (1 per quarter)'],note:'Target: White Paper published by Aug 2026'},
+      {icon:'🤝',title:'Customer-Facing Activities',items:['2× Customer Workshops (SOC Assessment)','2× EBC / Executive Briefings','1× POC (Splunk ES or CATO)','1× RFP win using new frameworks','1× Reference customer case study','QBR presentation — portfolio value'],note:'Target: 1 workshop + 1 EBC by Sep 2026'},
+      {icon:'📈',title:'OEM LP Completion',items:['Splunk — Full LP + SE track','Palo Alto — PANW Partner Hub SE path','CATO — SASE Expert program','CloudSEK — Full partner LP','BluSapphire — Partner LP'],note:'Target: All 5 OEM LPs complete by Oct 2026'},
+      {icon:'🧩',title:'Misc Leg — Phase 3 Preview',items:['Lead a customer-facing security assessment','Co-present with OEM SE at customer EBC','Contribute to large RFP (>₹5Cr)','Mentor a junior SA on Pi model','Build a vertical-specific solution play'],note:'Misc Leg formally activates: Jan 2027'},
+      {icon:'🏆',title:'90-Day Goal State',items:['Recognised go-to SA for 2 OEMs','1 published thought leadership piece','2 certifications achieved','Active LinkedIn presence with 1 viral post','Invited to 1 external speaking opportunity'],note:'Review at D-Day Jun 23 — confirm top 3 to activate'},
+    ].map(c=>`<div class="p2-card"><div class="p2-icon">${c.icon}</div><div class="p2-title">${c.title}</div><ul class="p2-list">${c.items.map(i=>`<li>${i}</li>`).join('')}</ul><div class="p2-note">${c.note}</div></div>`).join('')}
+  </div>`;
+}
+
+// ═══════════════════════════════════
+// NAV
+// ═══════════════════════════════════
+let currentTab='map';
+function showTab(tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  currentTab=tab;
+  document.getElementById('pg-'+tab)?.classList.add('on');
+  document.querySelector('.t-'+tab)?.classList.add('on');
+  if(tab==='map') renderMap();
+  if(tab==='plan') renderPlan();
+  if(tab==='kanban') renderKanban();
+  if(tab==='dash') renderDash();
+  if(tab==='assess'){ renderAssessNav(); renderAssessBody(); }
+  if(tab==='p2') renderP2();
+}
+
+// ═══════════════════════════════════
+// BOOT — same pattern as pers-evol-v2
+// ═══════════════════════════════════
+function init(){
+  updateStreak();
+  initSync();   // ← loads from localStorage, then pulls from Supabase, then polls every 5s
+  renderMap();
+}
+init();
+window.addEventListener('resize',()=>{ if(currentTab==='map') renderMap(); });
+
+</script>
+</body>
+</html>
